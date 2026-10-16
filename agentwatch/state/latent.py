@@ -80,7 +80,7 @@ def _windows(events: list[dict[str, Any]], window: int) -> list[dict[str, Any]]:
 def _kmeans(
     points: list[list[float]], k: int, seed: int = 3, iters: int = 50
 ) -> tuple[list[int], list[list[float]]]:
-    rng = random.Random(seed)  # noqa: S311 - seeded statistics, not security
+    rng = random.Random(seed)  # noqa: S311  # nosec B311 — seeded statistics, not security
     cents = [list(p) for p in rng.sample(points, k)]
     assign = [0] * len(points)
     for _ in range(iters):
@@ -147,7 +147,7 @@ def infer_states(
         s = _silhouette(pts, assign)
         if best is None or s > best[0]:
             best = (s, k, assign, cents)
-    assert best is not None
+    assert best is not None  # nosec B101 — invariant: range(2, max_k) always executes
     sil, k, assign, cents = best
     states = []
     for c, cent in enumerate(cents):

@@ -98,7 +98,7 @@ def permutation_test(
 ) -> float:
     obs = abs(mean(x) - mean(y))
     pooled = x + y
-    rng = random.Random(seed)  # noqa: S311 - seeded statistics, not security
+    rng = random.Random(seed)  # noqa: S311  # nosec B311 — seeded statistics, not security
     hits = 0
     for _ in range(n):
         rng.shuffle(pooled)

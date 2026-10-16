@@ -499,7 +499,7 @@ class Store:
             cache = key_cache if key_cache is not None else {}
             if ck not in cache:
                 found = self.data_key(obs.tenant_id, subject)
-                assert found is not None
+                assert found is not None  # nosec B101 — data_key auto-creates key if missing
                 cache[ck] = found
             key_id, key = cache[ck]
             if key is None:

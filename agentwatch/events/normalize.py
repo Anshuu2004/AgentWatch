@@ -144,7 +144,7 @@ def source_order(observations: Iterable[RawObservation]) -> list[RawObservation]
 def temporal(start: RawObservation | None, end: RawObservation | None = None) -> TemporalInfo:
     """Temporal info from start/end observations; missing times remain missing."""
     anchor = start or end
-    assert anchor is not None
+    assert anchor is not None  # nosec B101 — invariant: caller must pass start or end
     basis = anchor.clock.source if anchor.observed_at else "missing"
     s = start.observed_at if start else None
     e = end.observed_at if end else None

@@ -162,7 +162,7 @@ class NativeNormalizer(Normalizer):
         sp: dict[str, Any] = start.payload() if start else {}
         ep: dict[str, Any] = end.payload() if end else {}
         anchor = start or end
-        assert anchor is not None
+        assert anchor is not None  # nosec B101 — invariant: caller passes start or end
         b.kind = event_kind(sp.get("kind"))
         b.operation = str(sp.get("operation") or "unknown")
         if start is None:

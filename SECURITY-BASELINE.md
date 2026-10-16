@@ -59,9 +59,24 @@ Grouped by check. Each is suppressed inline at the location given.
 | `platform/prompts.py:90` | A/B routing between prompt variants. An attacker predicting which variant they get learns nothing and gains nothing. |
 | `tracing/sampling.py:34, 58, 86` | Trace sampling decisions, including reservoir sampling. Sampling is a performance mechanism, not an access control — predicting whether your own trace is kept has no security consequence. |
 | `cli/animator.py:48, 72` | Choosing characters for a terminal animation. |
+| `behaviour/drift.py:101` | Permutation test for empirical drift detection. Seeded statistical sampling where reproducibility is required; not a security control. |
+| `behaviour/profile.py:211` | Bootstrap confidence intervals for agent behavioral profiles. Seeded statistical resampling; not a security control. |
+| `state/latent.py:83` | Seeded K-means centroid initialization for latent state clustering. Deterministic clustering for repeatable analysis; not cryptographic. |
 
 The common thread: none of these values gates access to anything, and none is a secret. `secrets` would
 buy nothing except a slower RNG and, in the Shapley case, a loss of reproducibility.
+
+### B101 — use of assert detected
+
+| location | why it's accepted |
+|---|---|
+| `events/normalize.py:147` | Internal invariant check ensuring start or end observation is provided before deriving temporal basis. |
+| `events/normalizers/langchain.py:104` | Invariant check asserting observation group contains at least a start or end observation. |
+| `events/normalizers/llm_api.py:75` | Invariant check asserting event group contains a request or response observation. |
+| `events/normalizers/mcp.py:77, 121` | Invariant check asserting MCP message group contains a request or response. |
+| `events/normalizers/native.py:165` | Invariant check asserting event builder receives a start or end observation. |
+| `state/latent.py:150` | Invariant check verifying silhouette evaluation loop executed and yielded a cluster configuration. |
+| `storage/store.py:502` | Invariant check verifying data key was retrieved or auto-created for the subject. |
 
 ### B404 / B603 — subprocess usage
 

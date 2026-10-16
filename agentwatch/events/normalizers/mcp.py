@@ -74,7 +74,7 @@ class MCPNormalizer(Normalizer):
     ) -> Any:
         req, res = parts.get("request"), parts.get("response")
         anchor_obs = req or res
-        assert anchor_obs is not None  # a group always holds at least one message
+        assert anchor_obs is not None  # nosec B101 — a group always holds at least one message
         obs = [o for o in (req, res) if o]
         b = EventBuilder(self, ctx, obs)
         rq = (req.payload().get("message") or {}) if req else {}
@@ -118,7 +118,7 @@ class MCPNormalizer(Normalizer):
                 )
             )  # type: ignore[union-attr]
         anchor = req or res
-        assert anchor is not None
+        assert anchor is not None  # nosec B101 — a group always holds at least one message
         b.source_ids = [("mcp.call", f"{session}/{jid}")]
         if anchor.declared("parent_span_id"):
             b.parents.append(

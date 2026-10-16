@@ -208,7 +208,7 @@ def bootstrap_ci(
 ) -> tuple[float, float] | None:
     if len(values) < 2:
         return None
-    rng = random.Random(seed)  # noqa: S311 - seeded statistics, not security
+    rng = random.Random(seed)  # noqa: S311  # nosec B311 — seeded statistics, not security
     means = sorted(mean(rng.choices(values, k=len(values))) for _ in range(n))
     return (round(means[int(n * alpha / 2)], 6), round(means[int(n * (1 - alpha / 2)) - 1], 6))
 

@@ -101,7 +101,7 @@ class LangChainNormalizer(Normalizer):
         obs = [o for o in (start, end) if o]
         b = EventBuilder(self, ctx, obs)
         anchor = start or end
-        assert anchor is not None
+        assert anchor is not None  # nosec B101 — invariant: group has at least start or end
         family = (start or anchor).source_kind.removeprefix("langchain.").rsplit("_", 1)[0]
         sp: dict[str, Any] = start.payload() if start else {}
         ep: dict[str, Any] = end.payload() if end else {}

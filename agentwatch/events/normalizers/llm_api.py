@@ -72,7 +72,7 @@ class LLMApiNormalizer(Normalizer):
             b.extra_missing.append("model")
         self.map_io(b, request, response)
         anchor = req or end
-        assert anchor is not None
+        assert anchor is not None  # nosec B101 — invariant: group has request or response
         b.source_ids = [(f"{self.provider}.call", cid)]
         rid = end.declared("response_id") if end else None
         if rid:

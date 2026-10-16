@@ -1,138 +1,127 @@
-# Assignment & Contribution Policy
+# AgentWatch Contributor & Engineering Guidelines
 
-## ⚠️ Mandatory Assignment Rule
+> **Project Maintainer:** [Shinraya-Tech-Labs](https://github.com/Shinraya-Tech-Labs)  
+> **Repository:** [Shinraya-Tech-Labs/AgentWatch](https://github.com/Shinraya-Tech-Labs/AgentWatch)  
+> **Programs:** SSOC 2026, NSOC 2026, ELUSoC 2026, and Open Community Contributors  
 
-To prevent duplicate work, spam issues, and contributor conflicts:
-
-**Do not start work on an issue unless you have been assigned to it by a maintainer.**
-
-Pull requests submitted for unassigned issues may be:
-
-* Closed without review
-* Marked as duplicate work
-* Rejected even if technically correct
-
-Assignment is required before development begins.
+AgentWatch is a high-assurance, evidence-first observability and formal verification engine for AI agents. Because the core engine operates under strict formal logic, mathematical invariants, and zero-trust security standards, **contributions are held to rigorous production engineering standards**.
 
 ---
 
-## Claiming an Issue
+## 🚫 1. Anti-Spam & AI-Generated Slop Policy
 
-To request an issue:
+We take code quality and review time seriously. 
 
-1. Comment on the issue.
-2. Briefly explain your implementation plan.
-3. Wait for maintainer approval and assignment.
+1. **Zero Hallucinated / AI-Slop Code**:
+   - Submitting unreviewed, blind copy-pastes from ChatGPT, Claude, or other LLMs is strictly prohibited.
+   - You must thoroughly understand every line of code you submit. In PR reviews, maintainers will ask specific questions about your design decisions. Inability to explain your implementation will result in immediate PR closure.
+2. **No "Issue Farming" or Reservation Camping**:
+   - Claiming multiple issues without working on them is prohibited.
+   - Splitting a single feature into multiple trivial issues or PRs solely to inflate contest metrics will result in disqualification.
+3. **No Mass or Automated Issues**:
+   - Do not open generic automated scanner reports or boilerplate issues without a verified, reproducible failure in AgentWatch.
 
-Example:
+---
 
-```text
-I'd like to work on this issue.
+## 📋 2. Mandatory Issue Assignment & 72-Hour Inactivity Rule
 
-Implementation plan:
-- Add validation layer
-- Add tests
-- Update documentation
+To maintain fair opportunities and prevent duplicate work:
+
+1. **Never open a PR without an assigned issue**:
+   - PRs submitted for unassigned issues will be **closed immediately without review**.
+2. **How to Request Assignment**:
+   - Comment on the issue with a **concrete, step-by-step Technical Implementation Plan**:
+     ```text
+     I would like to be assigned to this issue.
+     
+     Technical Implementation Plan:
+     1. Architectural Plane: Plane B (Interpretation Plane)
+     2. Files to Modify: agentwatch/events/normalizer.py, agentwatch/contracts/evaluator.py
+     3. Invariant & Edge Cases Handled: Clock skew where delta exceeds window bound
+     4. Testing Strategy: Add unit test in tests/contracts/ verifying overlapping intervals
+     ```
+   - Wait for maintainer approval and official GitHub assignment.
+3. **Strict 72-Hour Inactivity Expiration**:
+   - Once assigned, you have **72 hours** to submit a draft PR or post a verified progress update.
+   - If an issue sits idle for 72 hours with no communication, **you will be automatically unassigned**, and the issue will be released to other contributors.
+
+---
+
+## 🛡️ 3. Non-Negotiable Security Standards (`SECURITY-BASELINE.md`)
+
+AgentWatch operates under a **Zero-Baseline Security Standard**:
+
+1. **Absolute Prohibition of Baseline Files**:
+   - Never create or modify `bandit-baseline.json` or any global suppression file.
+   - Any PR introducing a baseline file will be automatically rejected.
+2. **Scoped Inline Suppressions Only**:
+   - If a line of code genuinely triggers a false positive (e.g., non-cryptographic seeded PRNGs for reproducible statistical tests), it must be suppressed inline with the exact format:
+     ```python
+     rng = random.Random(seed)  # noqa: S311  # nosec B311 — seeded statistics for drift permutations
+     assert anchor is not None  # nosec B101 — invariant: caller must pass start or end timestamp
+     ```
+   - Three elements are mandatory:
+     - `# nosec <TEST-ID>`: Scoped strictly to the specific check (never a bare `# nosec`).
+     - `# noqa: <RULE>`: Scoped for Ruff consistency.
+     - **A prose reason**: Explaining why standard cryptographic or assertion safeguards do not apply.
+3. **Mandatory Documentation**:
+   - Every new suppression must be added with an architectural justification table in [`SECURITY-BASELINE.md`](SECURITY-BASELINE.md).
+
+---
+
+## 🧪 4. Test-Driven Development (TDD) & Quality Gates
+
+Every pull request must pass all local quality gates before submission:
+
+### 1. Test Coverage Requirement
+- **No Untested Code**: Every bug fix must include a regression test proving the fix. Every new feature must include comprehensive unit tests.
+- **Coverage Gate**: Test coverage across the modified package must satisfy the repository gate (**>= 70%**).
+- Tests must be deterministic (no flaky sleep calls, no external network dependencies).
+
+### 2. Format & Linting Standards
+Code must adhere strictly to Ruff formatting rules (Python 3.12+, 100 character line length, double quotes):
+
+```bash
+# Check formatting
+ruff format --check agentwatch/
+
+# Check linter rules
+ruff check agentwatch/
+
+# Run security scan
+bandit -r agentwatch
 ```
 
-Do not begin coding until assigned.
+### 3. Architecture Plane Boundaries
+Code must respect the 6 Architectural Planes ([`docs/v3/V3_ARCHITECTURE.md`](docs/v3/V3_ARCHITECTURE.md)):
+- `Evidence Plane` (Plane A) contains immutable raw envelopes.
+- `Interpretation Plane` (Plane B) normalizes observations into `ComputationalEvent`s.
+- `Structure Plane` (Plane C) handles graph and provenance relations.
+- Lower planes must **never** import from higher planes. Violating plane boundaries will block PR approval.
 
 ---
 
-## One Contributor Per Issue
+## 🔄 5. Git & PR Hygiene
 
-Unless explicitly approved by a maintainer:
-
-* Only one contributor may work on an issue at a time.
-* Multiple competing PRs for the same issue may be closed.
-* Maintainers reserve the right to select the contribution that best follows project requirements.
-
----
-
-## No Issue Farming
-
-Opening large numbers of low-effort issues is not considered a contribution.
-
-Issues may be closed immediately if they:
-
-* Contain only a title and one-line description
-* Duplicate existing functionality
-* Duplicate existing issues
-* Are generated from automated tools without verification
-* Lack a clear problem statement
-* Lack implementation reasoning
-* Exist solely to reserve work
-
-Contributors repeatedly creating low-quality issues may lose assignment privileges.
+1. **One PR per Issue**: Keep diffs focused, minimal, and atomic ("Ponytail" principle). Do not bundle unrelated refactors into a bug fix.
+2. **Conventional Commits**:
+   - `feat(contracts): implement interval precedence check`
+   - `fix(sensors): resolve span orphan drop on late delivery`
+   - `test(causality): add permutation test for blast radius`
+   - `docs(vault): update architecture planes diagram`
+3. **Synchronize with `main`**:
+   - Always rebase your branch on `origin/main` before opening or updating a PR:
+     ```bash
+     git fetch origin main
+     git rebase origin/main
+     ```
 
 ---
 
-## No Mass Issue Creation
+## 💬 6. Discord & Community Collaboration
 
-Creating large batches of issues without prior discussion is prohibited.
+For architectural discussions, RFC proposals, or questions regarding mid/hard issues:
+- **Discord Server**: [https://discord.com/invite/ZbQ9m9HtnE](https://discord.com/invite/ZbQ9m9HtnE)
+- **Maintainer Escalation**: Ping `@Project Admin` in `#contributors` channel.
 
-Examples include:
-
-* Opening dozens of issues within a short period
-* Splitting a single feature into many trivial issues
-* Creating issues solely to increase contribution counts
-
-Maintainers may close such issues without notice.
-
-Repeated abuse may result in:
-
-* Assignment restrictions
-* Removal from community programs
-* Temporary or permanent removal from project spaces
-
----
-
-## Discord Requirement For Large Changes
-
-The following require discussion in Discord before work begins:
-
-* New integrations
-* Security features
-* Infrastructure changes
-* CI/CD changes
-* Architectural refactors
-* Features affecting multiple modules
-
-PRs submitted without prior discussion may be closed.
-
-Discord:
-https://discord.com/invite/ZbQ9m9HtnE
-
----
-
-## Pull Requests Without Assignment
-
-Pull requests linked to an unassigned issue may be closed.
-
-Pull requests linked to an issue assigned to another contributor will normally be closed unless explicitly requested by a maintainer.
-
-Maintainers have final discretion regarding acceptance of contributions.
-
----
-
-## Contributor Conduct
-
-Contributors are expected to:
-
-* Read CONTRIBUTING.md before participating
-* Follow maintainer instructions
-* Respect issue ownership and assignments
-* Communicate before major work
-* Avoid spam behavior
-
-Failure to follow project guidelines may result in contribution restrictions.
-
----
-
-## 👥 Open Source Programs & Fork-to-Star Ratio
-
-AgentWatch is proud to participate in open-source developer mentorship and training programs:
-* **SSOC 2026** (Social Summer of Code)
-* **NSOC 2026** (Nexus Spring of Code)
-
-These initiatives introduce student developers to production-grade Python codebases. As part of their onboarding and learning process, students fork the repository, configure their local development environments, run the test suites, and submit contributions. This active participation explains the repository's high fork-to-star ratio, where each fork represents a developer learning and testing AgentWatch locally.
+Failure to follow these guidelines may result in assignment revocation, PR rejection, or removal from mentorship program leaderboards.

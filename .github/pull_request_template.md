@@ -1,32 +1,54 @@
-## Description
+## 📌 Description
 
-Please include a summary of the change and which issue is fixed. Please also include relevant motivation and context.
+Provide a clear explanation of what this pull request changes and why.
 
-Fixes # (issue)
+Fixes # (linked issue number)
 
-## Type of change
+---
 
-Please delete options that are not relevant.
+## 🏛️ Architectural Plane & Classification
 
-- [ ] Bug fix (non-breaking change which fixes an issue)
-- [ ] New feature (non-breaking change which adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- [ ] This change requires a documentation update
+Which architectural plane does this change target? ([`docs/v3/V3_ARCHITECTURE.md`](docs/v3/V3_ARCHITECTURE.md))
+- [ ] **Plane A: Evidence Plane** (Sensors, RawObservation, Ingest, Redaction)
+- [ ] **Plane B: Interpretation Plane** (Normalizers, ComputationalEvent, Entity Resolution)
+- [ ] **Plane C: Structure Plane** (Hyperedge Store, Execution/Information/Causal Graphs, Provenance)
+- [ ] **Plane D: Model Plane** (Latent States, Motifs, Behavioral Genome, Drift)
+- [ ] **Plane E: Experiment Plane** (Replay L0–L4, Timelines, Counterfactuals)
+- [ ] **Plane F: Interface Plane** (API, Typer CLI, Next.js Frontend)
+- [ ] **Documentation / CI Maintenance**
 
-## How Has This Been Tested?
+---
 
-Please describe the tests that you ran to verify your changes. Provide instructions so we can reproduce. Please also list any relevant details for your test configuration.
+## 🧪 Verification & Evidence of Testing
 
-- [ ] Test A
-- [ ] Test B
+Please paste the exact command you ran locally and its output:
 
-## Checklist:
+```bash
+# Example: pytest tests/contracts/test_evidence_sufficiency.py
+# (Paste output here)
+```
 
-- [ ] My code follows the style guidelines of this project
-- [ ] I have performed a self-review of my own code
-- [ ] I have commented my code, particularly in hard-to-understand areas
-- [ ] I have made corresponding changes to the documentation
-- [ ] My changes generate no new warnings
-- [ ] I have added tests that prove my fix is effective or that my feature works
-- [ ] New and existing unit tests pass locally with my changes
-- [ ] Any dependent changes have been merged and published in downstream modules
+- [ ] New unit tests or regression tests were added covering this logic.
+- [ ] Existing test suite passes with zero regressions (`pytest tests/`).
+- [ ] Test coverage does not decrease (satisfies >= 70% coverage gate).
+
+---
+
+## 🛡️ Security & Linter Quality Checklist
+
+- [ ] **Bandit Scan Passed**: Ran `bandit -r agentwatch` with 0 issues found.
+- [ ] **No Baseline File**: Confirmed `bandit-baseline.json` was NOT created or edited.
+- [ ] **Inline Suppressions (If applicable)**: Any `# nosec` suppression is scoped (`# nosec <ID> # noqa: <RULE>`), includes prose justification, and is documented in [`SECURITY-BASELINE.md`](SECURITY-BASELINE.md).
+- [ ] **Ruff Format**: Ran `ruff format --check agentwatch/` (Clean pass).
+- [ ] **Ruff Check**: Ran `ruff check agentwatch/` (Clean pass).
+- [ ] **Plane Boundaries**: Verified lower planes do not import from higher planes.
+
+---
+
+## ✍️ Contributor Integrity Declaration
+
+By submitting this pull request, I certify that:
+1. I have been formally assigned to this issue by a maintainer.
+2. I personally understand and wrote or thoroughly verified every line of this code.
+3. This PR contains no unreviewed, hallucinated, or unverified AI-generated slop.
+4. My branch is cleanly rebased on the latest `origin/main`.

@@ -85,6 +85,12 @@
       "contributions": 2
     },
     {
+      "login": "shauryasanyal",
+      "avatar_url": "https://github.com/shauryasanyal.png",
+      "html_url": "https://github.com/shauryasanyal",
+      "contributions": 2
+    },
+    {
       "login": "speed-velocity",
       "avatar_url": "https://github.com/speed-velocity.png",
       "html_url": "https://github.com/speed-velocity",
@@ -124,12 +130,6 @@
       "login": "simplyintellect",
       "avatar_url": "https://github.com/simplyintellect.png",
       "html_url": "https://github.com/simplyintellect",
-      "contributions": 1
-    },
-    {
-      "login": "shauryasanyal",
-      "avatar_url": "https://github.com/shauryasanyal.png",
-      "html_url": "https://github.com/shauryasanyal",
       "contributions": 1
     },
     {
@@ -247,6 +247,6 @@
       "contributions": 1
     }
   ],
-  "updated_at": "2026-10-16T08:16:27Z",
+  "updated_at": "2026-10-18T14:03:08Z",
   "total": 41
 }

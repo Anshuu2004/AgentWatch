@@ -16,7 +16,7 @@
 [![Coverage](https://img.shields.io/codecov/c/github/sreerevanth/AgentWatch?style=flat-square)](https://codecov.io/gh/sreerevanth/AgentWatch)
 [![License](https://img.shields.io/badge/license-Apache_2.0-blue?style=flat-square)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.12+-blue?style=flat-square&logo=python)](https://python.org)
-[![Discord](https://img.shields.io/badge/Discord-Join_Community-5865F2?style=flat-square&logo=discord)](https://discord.gg/n2RzUmZ4)
+[![Discord](https://img.shields.io/badge/Discord-Join_Community-5865F2?style=flat-square&logo=discord)](https://discord.gg/UT9uaeY46e)
 [![Stars](https://img.shields.io/github/stars/sreerevanth/AgentWatch?style=flat-square&color=gold)](https://github.com/sreerevanth/AgentWatch/stargazers)
 [![Forks](https://img.shields.io/github/forks/sreerevanth/AgentWatch?style=flat-square&color=orange)](https://github.com/sreerevanth/AgentWatch/network)
 [![NSoC](https://img.shields.io/badge/NSoC_26'-participating-purple?style=flat-square)](https://github.com/sreerevanth/AgentWatch/issues)
@@ -32,7 +32,7 @@ agentwatch session watch "your agent command"
 
 <br/>
 
-[**Quick Start**](#-quick-start) · [**How It Works**](#-how-it-works) · [**Architecture**](#-architecture) · [**Frameworks**](#-supported-frameworks) · [**Discord**](https://discord.gg/n2RzUmZ4) · [**Contribute**](#-contributing)
+[**Quick Start**](#-quick-start) · [**How It Works**](#-how-it-works) · [**Architecture**](#-architecture) · [**Frameworks**](#-supported-frameworks) · [**Discord**](https://discord.gg/UT9uaeY46e) · [**Contribute**](#-contributing)
 
 </div>
 
@@ -434,7 +434,7 @@ flowchart LR
     style E fill:#0f2a18,stroke:#3ecf8e,color:#fff
 ```
 
-**Before you start** → join the [Discord](https://discord.gg/n2RzUmZ4). Get help picking the right issue, discuss your approach, and ship faster.
+**Before you start** → join the [Discord](https://discord.gg/UT9uaeY46e). Get help picking the right issue, discuss your approach, and ship faster.
 
 ### Local Backend Setup
 
@@ -524,7 +524,7 @@ We believe in fostering a collaborative, transparent AI engineering ecosystem. I
 
 ## 💬 Community
 
-**Discord** — [discord.gg/n2RzUmZ4](https://discord.gg/n2RzUmZ4)
+**Discord** — [discord.gg/UT9uaeY46e](https://discord.gg/UT9uaeY46e)
 
 Contributors discuss issues, get unblocked, and ship together. Get your name on the landing page after your first PR merges!
 
@@ -538,6 +538,6 @@ Contributors discuss issues, get unblocked, and ship together. Get your name on 
 
 Built by [sreerevanth](https://github.com/sreerevanth)
 
-⭐ **Star it** · 🐛 [**Open an issue**](https://github.com/sreerevanth/AgentWatch/issues) · 💬 [**Join Discord**](https://discord.gg/n2RzUmZ4)
+⭐ **Star it** · 🐛 [**Open an issue**](https://github.com/sreerevanth/AgentWatch/issues) · 💬 [**Join Discord**](https://discord.gg/UT9uaeY46e)
 
 </div>

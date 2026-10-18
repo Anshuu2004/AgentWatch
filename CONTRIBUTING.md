@@ -27,12 +27,18 @@ We take code quality and review time seriously.
 
 To maintain fair opportunities and prevent duplicate work:
 
-1. **Never open a PR without an assigned issue**:
+1. **Mandatory Discord Membership & Proof Required**:
+   - All contributors **must join the official AgentWatch Discord community**: **[https://discord.gg/UT9uaeY46e](https://discord.gg/UT9uaeY46e)**.
+   - When requesting assignment to any issue, you **must include proof of Discord membership** (your Discord username / handle) in your comment. Requests lacking Discord proof will not be assigned.
+2. **Never open a PR without an assigned issue**:
    - PRs submitted for unassigned issues will be **closed immediately without review**.
-2. **How to Request Assignment**:
-   - Comment on the issue with a **concrete, step-by-step Technical Implementation Plan**:
+3. **How to Request Assignment**:
+   - Comment on the issue with your Discord handle and a **concrete, step-by-step Technical Implementation Plan**:
      ```text
      I would like to be assigned to this issue.
+     
+     Discord Handle: @my_discord_username
+     Proof of Membership: Member of AgentWatch Discord
      
      Technical Implementation Plan:
      1. Architectural Plane: Plane B (Interpretation Plane)
@@ -41,7 +47,7 @@ To maintain fair opportunities and prevent duplicate work:
      4. Testing Strategy: Add unit test in tests/contracts/ verifying overlapping intervals
      ```
    - Wait for maintainer approval and official GitHub assignment.
-3. **Strict 72-Hour Inactivity Expiration**:
+4. **Strict 72-Hour Inactivity Expiration**:
    - Once assigned, you have **72 hours** to submit a draft PR or post a verified progress update.
    - If an issue sits idle for 72 hours with no communication, **you will be automatically unassigned**, and the issue will be released to other contributors.
 

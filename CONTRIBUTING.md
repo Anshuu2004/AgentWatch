@@ -124,15 +124,34 @@ Code must respect the 6 Architectural Planes ([`docs/v3/V3_ARCHITECTURE.md`](doc
 
 ---
 
-## 🔄 5. Git & PR Hygiene
+## 🏷️ 5. NSoC 26' Difficulty Framework & Issue Tiers
 
-1. **One PR per Issue**: Keep diffs focused, minimal, and atomic ("Ponytail" principle). Do not bundle unrelated refactors into a bug fix.
-2. **Conventional Commits**:
+AgentWatch participates in the **Nexus Spring of Code (NSoC 26')** and follows a standard 3-tier difficulty model:
+
+| Tier | Label | Difficulty | Typical Scope | Prerequisites |
+| :---: | :---: | :---: | :--- | :--- |
+| **Level 1** | `level1` | **Easy** (1) | Documentation, CLI ergonomics, colorized formatting, test coverage gaps, schema validators. | Python 3.12 basics, pytest. |
+| **Level 2** | `level2` | **Mid** (2) | Normalizer pipelines, OTel GenAI semantic conventions, API async streaming, React frontend waterfall visualizers. | Asyncio, OTel, FastAPI, Next.js. |
+| **Level 3** | `level3` | **Hard** (3) | Metric First-Order Temporal Logic (MFOTL), counterfactual replay engines, distributed hyperedge stores, ZK/Merkle witness attestations. | Formal logic, graph theory, distributed systems, cryptography. |
+
+> All NSoC issues are tagged with the `NSoC 26'` label along with their respective difficulty label (`level1`, `level2`, or `level3`).
+
+---
+
+## 🔄 6. Git & PR Hygiene
+
+1. **Branch Naming Convention**:
+   - `feat/issue-<number>-<short-description>` (e.g., `feat/issue-730-sequence-gap-detection`)
+   - `fix/issue-<number>-<short-description>` (e.g., `fix/issue-725-mcp-payload-sanitize`)
+2. **One PR per Issue**: Keep diffs focused, minimal, and atomic ("Ponytail" principle). Do not bundle unrelated refactors into a bug fix.
+3. **Conventional Commits**:
    - `feat(contracts): implement interval precedence check`
    - `fix(sensors): resolve span orphan drop on late delivery`
    - `test(causality): add permutation test for blast radius`
    - `docs(vault): update architecture planes diagram`
-3. **Synchronize with `main`**:
+4. **Link Issues in PR Description**:
+   - Always include `Fixes #<issue-number>` or `Closes #<issue-number>` in the PR body.
+5. **Synchronize with `main`**:
    - Always rebase your branch on `origin/main` before opening or updating a PR:
      ```bash
      git fetch origin main
@@ -141,10 +160,39 @@ Code must respect the 6 Architectural Planes ([`docs/v3/V3_ARCHITECTURE.md`](doc
 
 ---
 
-## 💬 6. Discord & Community Collaboration
+## ✅ 7. Pre-Flight Pull Request Checklist
 
-For architectural discussions, RFC proposals, or questions regarding mid/hard issues:
-- **Discord Server**: [https://discord.com/invite/ZbQ9m9HtnE](https://discord.com/invite/ZbQ9m9HtnE)
-- **Maintainer Escalation**: Ping `@Project Admin` in `#contributors` channel.
+Before opening or requesting review on a Pull Request, verify every item below:
 
-Failure to follow these guidelines may result in assignment revocation, PR rejection, or removal from mentorship program leaderboards.
+- [ ] **Assigned Issue**: You are officially assigned to the issue by a maintainer.
+- [ ] **Discord Verified**: You have joined our [Discord](https://discord.gg/UT9uaeY46e) and shared your handle.
+- [ ] **Branch Naming**: Branch follows `feat/issue-<number>-...` or `fix/issue-<number>-...`.
+- [ ] **Test Coverage**: All unit/integration tests pass (`pytest`) with >= 70% package coverage.
+- [ ] **Formatting**: Clean formatting checked via `ruff format --check agentwatch/`.
+- [ ] **Linting**: No errors reported by `ruff check agentwatch/`.
+- [ ] **Security Baseline**: Scanned with `bandit -r agentwatch`. **Zero** global suppression or baseline files created.
+- [ ] **Architectural Planes**: Code strictly adheres to Plane boundaries (`Evidence -> Interpretation -> Structure`).
+- [ ] **No Unverified AI Slop**: You understand every line of code submitted and can defend it in review.
+
+---
+
+## 📜 8. Code of Conduct Compliance
+
+All participants in AgentWatch are required to uphold our **[Code of Conduct](CODE_OF_CONDUCT.md)** across GitHub issues, PR reviews, commit messages, and the official Discord server:
+
+- **Constructive & Respectful Interaction**: Focus on code and architectural merit; zero tolerance for harassment, personal attacks, or toxic behavior.
+- **Fair Participation**: No sockpuppeting, leaderboard manipulation, or issue hoarding.
+- **Enforcement Framework**: Violations are addressed through our 4-tier enforcement model:
+  1. *Tier 1*: Formal warning and guidance.
+  2. *Tier 2*: Revocation of issue assignments and 7-day cooling-off period.
+  3. *Tier 3*: Disqualification and expulsion from active programs (NSoC, SSoC).
+  4. *Tier 4*: Permanent organization-wide ban.
+
+---
+
+## 💬 9. Discord & Community Collaboration
+
+For architectural discussions, RFC proposals, or unblocking questions:
+- **Discord Server**: [https://discord.gg/UT9uaeY46e](https://discord.gg/UT9uaeY46e)
+- **Maintainer Escalation**: Ping `@SHAURYASANYAL3` or `@Project Admin` in `#contributors` channel.
+- **Reporting & Support**: Email `shauryasanyal.21jun@gmail.com` or DM a maintainer on Discord.

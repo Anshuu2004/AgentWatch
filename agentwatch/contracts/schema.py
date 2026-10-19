@@ -7,6 +7,7 @@ and coverage profiles for open-world trace verification.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
@@ -94,6 +95,35 @@ class EvidenceContract:
 
 
 @dataclass(frozen=True, slots=True)
+class SequenceGap:
+    """Represents a detected discontinuity in a sensor's monotonic sequence stream."""
+
+    sensor_id: str
+    seq_lost_start: int
+    seq_lost_end: int
+    count: int
+    t_before: datetime | None = None
+    t_after: datetime | None = None
+
+    def overlaps_window(self, window_start: datetime, window_end: datetime) -> bool:
+        """Check if this gap's time bounds overlap the contract's expected observation window."""
+        if self.t_before is None or self.t_after is None:
+            # Unbounded timestamps: conservatively assume potential overlap
+            return True
+        return not (self.t_after <= window_start or self.t_before >= window_end)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "sensor_id": self.sensor_id,
+            "seq_lost_start": self.seq_lost_start,
+            "seq_lost_end": self.seq_lost_end,
+            "count": self.count,
+            "t_before": self.t_before.isoformat() if self.t_before else None,
+            "t_after": self.t_after.isoformat() if self.t_after else None,
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class CoverageSnapshot:
     """Attestation of sensor presence, authority, and completeness for an execution scope."""
 
@@ -102,6 +132,41 @@ class CoverageSnapshot:
     active: bool = True
     dropped_count: int = 0
     clock_uncertainty_ms: float = 0.0
+    seq_min: int | None = None
+    seq_max: int | None = None
+    gaps: tuple[SequenceGap, ...] = ()
+    sampling_rate: float | None = None
+    sampling_policy: str | None = None
+
+    @property
+    def drop_rate(self) -> float:
+        """Calculate the proportion of dropped frames over the observed span."""
+        if self.seq_min is not None and self.seq_max is not None:
+            expected = self.seq_max - self.seq_min + 1
+            if expected > 0:
+                total_lost = sum(g.count for g in self.gaps) or self.dropped_count
+                return min(1.0, max(0.0, total_lost / expected))
+        return 0.0 if (self.dropped_count == 0 and not self.gaps) else 1.0
+
+    @property
+    def has_gaps(self) -> bool:
+        return len(self.gaps) > 0 or self.dropped_count > 0
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "sensor_id": self.sensor_id,
+            "authoritative_for": list(self.authoritative_for),
+            "active": self.active,
+            "dropped_count": self.dropped_count,
+            "clock_uncertainty_ms": self.clock_uncertainty_ms,
+            "seq_min": self.seq_min,
+            "seq_max": self.seq_max,
+            "gaps": [g.to_dict() for g in self.gaps],
+            "sampling_rate": self.sampling_rate,
+            "sampling_policy": self.sampling_policy,
+            "drop_rate": self.drop_rate,
+            "has_gaps": self.has_gaps,
+        }
 
 
 @dataclass(frozen=True, slots=True)

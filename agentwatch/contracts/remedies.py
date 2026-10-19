@@ -27,8 +27,13 @@ def get_remedy_for_missing_fact(fact: MissingFact) -> str:
     if fact.reason == MissingReason.SPAN_ORPHAN:
         return "Ensure distributed context propagation (W3C traceparent) is active across service boundaries."
 
+    if fact.reason == MissingReason.SAMPLED_OUT:
+        sensors = ", ".join(fact.candidate_sensors) if fact.candidate_sensors else "relevant sensor"
+        return f"Increase telemetry sampling rate or configure tail-based sampling rule for operation '{fact.required_for}' on sensor '{sensors}'."
+
     if fact.reason == MissingReason.SEQUENCE_GAP:
-        return "Sequence counter gap detected in event stream; investigate network packet drops or buffer overflows."
+        sensors = ", ".join(fact.candidate_sensors) if fact.candidate_sensors else "relevant sensor"
+        return f"Sequence counter gap detected on sensor '{sensors}' for operation '{fact.required_for}'; inspect network transport, socket buffers, or message queue drop counters."
 
     if fact.reason == MissingReason.CLOCK_AMBIGUITY:
         return "Synchronize host clocks (NTP/PTP) or rely on explicit parent-child span links instead of wall clock."

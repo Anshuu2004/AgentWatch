@@ -7,7 +7,9 @@ extracting minimal witnesses and identifying unobserved facts without false alar
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import datetime, timedelta
 
+from agentwatch.contracts.coverage import build_coverage_profile
 from agentwatch.contracts.remedies import get_remedy_for_missing_fact
 from agentwatch.contracts.schema import (
     ContractOperator,
@@ -43,18 +45,19 @@ def evaluate_contract(
             assumptions=("Vacuous satisfaction over empty target set",),
         )
 
+    # Introspect dynamic coverage profile from events and declared coverage
+    active_coverage = build_coverage_profile(events, coverage)
+
     # Index coverage by authoritative operations
     authoritative_sensors = {
         sensor.sensor_id: sensor
-        for sensor in coverage
-        if sensor.active
-        and sensor.dropped_count == 0
-        and rule.required_operation in sensor.authoritative_for
+        for sensor in active_coverage
+        if sensor.active and rule.required_operation in sensor.authoritative_for
     }
 
     # Extract max clock uncertainty across sensors and events
     max_clock_uncertainty_ms = max(
-        [s.clock_uncertainty_ms for s in coverage]
+        [s.clock_uncertainty_ms for s in active_coverage]
         + [e.time.uncertainty_ms or 0.0 for e in events]
         + [0.0]
     )
@@ -70,6 +73,103 @@ def evaluate_contract(
         join_key = rule.join_on[0] if rule.join_on else None
         join_val = target_attrs.get(join_key) if join_key else None
 
+        # Compute expected observation window for this target
+        target_time = target.time.start
+        window_start: datetime | None = None
+        window_end: datetime | None = None
+        if target_time is not None:
+            if rule.operator == ContractOperator.PRECEDING_EVENT:
+                window_start = target_time - timedelta(seconds=rule.max_window_seconds)
+                window_end = target_time
+            elif rule.operator == ContractOperator.EVENTUALLY_WITHIN:
+                window_start = target_time
+                window_end = target_time + timedelta(seconds=rule.max_window_seconds)
+
+        def check_sensor_gaps_or_sampling() -> EvidenceAssessment | None:
+            if not authoritative_sensors:
+                return None
+
+            # 1. Check sampling
+            for s in authoritative_sensors.values():
+                if s.sampling_rate is not None and s.sampling_rate < 1.0:
+                    fact = MissingFact(
+                        field_name="event_stream",
+                        reason=MissingReason.SAMPLED_OUT,
+                        required_for=rule.required_operation,
+                        candidate_sensors=(s.sensor_id,),
+                        recoverability=Recoverability.MAYBE,
+                    )
+                    return EvidenceAssessment(
+                        contract_name=contract.name,
+                        verdict=EvidenceVerdict.INCONCLUSIVE,
+                        summary=(
+                            f"Inconclusive: required '{rule.required_operation}' may have been sampled out "
+                            f"(sampling rate {s.sampling_rate:.1%}) on authoritative sensor '{s.sensor_id}'."
+                        ),
+                        missing_facts=(fact,),
+                        remedies=(get_remedy_for_missing_fact(fact),),
+                        assumptions=(
+                            f"Probabilistic sampling on '{s.sensor_id}' prevents definitive refutation",
+                        ),
+                    )
+
+            # 2. Check localized sequence gaps overlapping the window
+            for s in authoritative_sensors.values():
+                for gap in s.gaps:
+                    if (
+                        window_start is None
+                        or window_end is None
+                        or gap.overlaps_window(window_start, window_end)
+                    ):
+                        fact = MissingFact(
+                            field_name="sequence_gap",
+                            reason=MissingReason.SEQUENCE_GAP,
+                            required_for=rule.required_operation,
+                            candidate_sensors=(s.sensor_id,),
+                            recoverability=Recoverability.INSTRUMENTABLE,
+                        )
+                        return EvidenceAssessment(
+                            contract_name=contract.name,
+                            verdict=EvidenceVerdict.INCONCLUSIVE,
+                            summary=(
+                                f"Inconclusive: target '{rule.target_operation}' occurred without required '{rule.required_operation}', "
+                                f"but authoritative sensor '{s.sensor_id}' experienced sequence gap "
+                                f"[{gap.seq_lost_start}..{gap.seq_lost_end}] ({gap.count} frames lost) "
+                                f"overlapping the required observation window."
+                            ),
+                            missing_facts=(fact,),
+                            remedies=(get_remedy_for_missing_fact(fact),),
+                            assumptions=(
+                                f"Authoritative sensor '{s.sensor_id}' experienced sequence gap [{gap.seq_lost_start}..{gap.seq_lost_end}]",
+                            ),
+                        )
+
+            # 3. Check aggregate dropped_count without specific gap windows
+            for s in authoritative_sensors.values():
+                if s.dropped_count > 0 and not s.gaps:
+                    fact = MissingFact(
+                        field_name="sequence_gap",
+                        reason=MissingReason.SEQUENCE_GAP,
+                        required_for=rule.required_operation,
+                        candidate_sensors=(s.sensor_id,),
+                        recoverability=Recoverability.INSTRUMENTABLE,
+                    )
+                    return EvidenceAssessment(
+                        contract_name=contract.name,
+                        verdict=EvidenceVerdict.INCONCLUSIVE,
+                        summary=(
+                            f"Inconclusive: target '{rule.target_operation}' occurred without required '{rule.required_operation}', "
+                            f"but authoritative sensor '{s.sensor_id}' reported {s.dropped_count} dropped frames."
+                        ),
+                        missing_facts=(fact,),
+                        remedies=(get_remedy_for_missing_fact(fact),),
+                        assumptions=(
+                            f"Authoritative sensor '{s.sensor_id}' reported dropped frames ({s.dropped_count})",
+                        ),
+                    )
+
+            return None
+
         # Find matching candidate required events
         candidates = [
             e
@@ -79,7 +179,13 @@ def evaluate_contract(
         ]
 
         if not candidates:
+            # Check if any authoritative sensor experienced sequence gaps or sampling
+            gap_assessment = check_sensor_gaps_or_sampling()
+            if gap_assessment is not None:
+                return gap_assessment
+
             # Open-world determination: was absence authoritatively captured?
+            # Any authoritative sensor remaining has been verified clean within the required window.
             if authoritative_sensors and contract.require_authoritative_log_for_refutation:
                 sensor_names = ", ".join(authoritative_sensors.keys())
                 all_refute_obs.extend(target.derived_from)
@@ -172,6 +278,9 @@ def evaluate_contract(
                 delta_sec = (target_time - req_time).total_seconds()
                 if delta_sec < 0:
                     # Occurred after target!
+                    gap_assessment = check_sensor_gaps_or_sampling()
+                    if gap_assessment is not None:
+                        return gap_assessment
                     all_refute_obs.extend(target.derived_from + req.derived_from)
                     return EvidenceAssessment(
                         contract_name=contract.name,
@@ -180,6 +289,9 @@ def evaluate_contract(
                         refute_obs_ids=tuple(dict.fromkeys(all_refute_obs)),
                     )
                 if delta_sec > rule.max_window_seconds:
+                    gap_assessment = check_sensor_gaps_or_sampling()
+                    if gap_assessment is not None:
+                        return gap_assessment
                     all_refute_obs.extend(target.derived_from + req.derived_from)
                     return EvidenceAssessment(
                         contract_name=contract.name,
@@ -197,6 +309,9 @@ def evaluate_contract(
             elif rule.operator == ContractOperator.EVENTUALLY_WITHIN:
                 delta_sec = (req_time - target_time).total_seconds()
                 if delta_sec < 0:
+                    gap_assessment = check_sensor_gaps_or_sampling()
+                    if gap_assessment is not None:
+                        return gap_assessment
                     all_refute_obs.extend(target.derived_from + req.derived_from)
                     return EvidenceAssessment(
                         contract_name=contract.name,
@@ -205,6 +320,9 @@ def evaluate_contract(
                         refute_obs_ids=tuple(dict.fromkeys(all_refute_obs)),
                     )
                 if delta_sec > rule.max_window_seconds:
+                    gap_assessment = check_sensor_gaps_or_sampling()
+                    if gap_assessment is not None:
+                        return gap_assessment
                     all_refute_obs.extend(target.derived_from + req.derived_from)
                     return EvidenceAssessment(
                         contract_name=contract.name,

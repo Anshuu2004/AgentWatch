@@ -8,6 +8,20 @@ AgentWatch is a high-assurance, evidence-first observability and formal verifica
 
 ---
 
+## ⚡ Quick Summary for Contributors (TL;DR)
+
+Before contributing to AgentWatch (under NSoC, SSoC, or open community cycles), make sure you understand these **4 core rules**:
+
+| Rule | Requirement | Details |
+| :--- | :--- | :--- |
+| **1. Discord Membership** | **Mandatory** | You **must** join our official Discord server: [**https://discord.gg/UT9uaeY46e**](https://discord.gg/UT9uaeY46e). |
+| **2. Discord Proof on Claim** | **Required in comment** | Provide your exact Discord username (e.g., `Discord Handle: @username`) in your assignment request. |
+| **3. Technical Plan** | **Required (No `/claim`)** | Bare `/claim` requests are declined. Outline your architectural approach, files to change, and test strategy. |
+| **4. Max 3 Concurrent Issues** | **Cap of 3 issues** | Contributors can be assigned a **maximum of up to 3 active issues** at a time. |
+| **5. 72-Hour Progress SLA** | **No issue camping** | Submit a draft PR or progress update within 72 hours of assignment, or the issue is re-assigned. |
+
+---
+
 ## 🚫 1. Anti-Spam & AI-Generated Slop Policy
 
 We take code quality and review time seriously. 
@@ -16,7 +30,7 @@ We take code quality and review time seriously.
    - Submitting unreviewed, blind copy-pastes from ChatGPT, Claude, or other LLMs is strictly prohibited.
    - You must thoroughly understand every line of code you submit. In PR reviews, maintainers will ask specific questions about your design decisions. Inability to explain your implementation will result in immediate PR closure.
 2. **No "Issue Farming" or Reservation Camping**:
-   - Claiming multiple issues without working on them is prohibited.
+   - Claiming issues without active work is prohibited.
    - Splitting a single feature into multiple trivial issues or PRs solely to inflate contest metrics will result in disqualification.
 3. **No Mass or Automated Issues**:
    - Do not open generic automated scanner reports or boilerplate issues without a verified, reproducible failure in AgentWatch.
@@ -47,7 +61,10 @@ To maintain fair opportunities and prevent duplicate work:
      4. Testing Strategy: Add unit test in tests/contracts/ verifying overlapping intervals
      ```
    - Wait for maintainer approval and official GitHub assignment.
-4. **Strict 72-Hour Inactivity Expiration**:
+4. **Concurrent Assignment Limit (Max 3 Issues)**:
+   - A contributor may hold a **maximum of up to 3 assigned issues concurrently**.
+   - Contributors must demonstrate active progress on their existing assigned issues before requesting additional ones.
+5. **Strict 72-Hour Inactivity Expiration**:
    - Once assigned, you have **72 hours** to submit a draft PR or post a verified progress update.
    - If an issue sits idle for 72 hours with no communication, **you will be automatically unassigned**, and the issue will be released to other contributors.
 

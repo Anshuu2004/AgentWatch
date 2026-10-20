@@ -10,6 +10,11 @@ from collections.abc import Sequence
 from datetime import datetime, timedelta
 
 from agentwatch.contracts.coverage import build_coverage_profile
+from agentwatch.contracts.order import (
+    CausalRelation,
+    HappensBeforeGraph,
+    TimestampInterval,
+)
 from agentwatch.contracts.remedies import get_remedy_for_missing_fact
 from agentwatch.contracts.schema import (
     ContractOperator,
@@ -43,6 +48,20 @@ def evaluate_contract(
             verdict=EvidenceVerdict.SUPPORTED,
             summary=f"No target operations ('{rule.target_operation}') occurred; contract vacuously satisfied.",
             assumptions=("Vacuous satisfaction over empty target set",),
+        )
+
+    # Construct happens-before partial order DAG and check for causal cycles
+    causal_graph = HappensBeforeGraph(events)
+    if causal_graph.has_cycle():
+        cycle_list = list(causal_graph.cycle_nodes)
+        return EvidenceAssessment(
+            contract_name=contract.name,
+            verdict=EvidenceVerdict.CONFLICTING_EVIDENCE,
+            summary=(
+                f"Conflicting evidence: causal cycle or contradictory link topology detected "
+                f"among events: {cycle_list}."
+            ),
+            assumptions=("Contradictory causal DAG prevents deterministic temporal evaluation",),
         )
 
     # Introspect dynamic coverage profile from events and declared coverage
@@ -229,11 +248,35 @@ def evaluate_contract(
                 )
 
         # Candidate found - verify temporal contract
-        for req in candidates:
-            req_time = req.time.start
-            target_time = target.time.start
+        target_interval = TimestampInterval.from_event(
+            target, default_uncertainty_ms=max_clock_uncertainty_ms
+        )
+        if target_interval is None:
+            fact = MissingFact(
+                field_name="timestamp",
+                reason=MissingReason.FIELD_ABSENT,
+                required_for=rule.required_operation,
+                recoverability=Recoverability.INSTRUMENTABLE,
+            )
+            missing_facts.append(fact)
+            remedies.append(get_remedy_for_missing_fact(fact))
+            return EvidenceAssessment(
+                contract_name=contract.name,
+                verdict=EvidenceVerdict.INCONCLUSIVE,
+                summary="Inconclusive: one or more events lack valid start timestamps.",
+                missing_facts=tuple(missing_facts),
+                remedies=tuple(remedies),
+            )
 
-            if req_time is None or target_time is None:
+        target_satisfied = False
+        target_conflicting_assessment: EvidenceAssessment | None = None
+        target_refute_assessment: EvidenceAssessment | None = None
+
+        for req in candidates:
+            req_interval = TimestampInterval.from_event(
+                req, default_uncertainty_ms=max_clock_uncertainty_ms
+            )
+            if req_interval is None:
                 fact = MissingFact(
                     field_name="timestamp",
                     reason=MissingReason.FIELD_ABSENT,
@@ -250,88 +293,231 @@ def evaluate_contract(
                     remedies=tuple(remedies),
                 )
 
-            # Check clock ambiguity
-            diff_ms = abs((target_time - req_time).total_seconds() * 1000.0)
-            has_causal_link = any(
-                p.value in [sid[1] for sid in req.source_ids] for p in target.parents
-            )
+            causal_rel = causal_graph.relate(req.event_id, target.event_id)
 
-            if (
-                max_clock_uncertainty_ms > 0
-                and diff_ms <= max_clock_uncertainty_ms
-                and not has_causal_link
-            ):
+            if causal_rel == CausalRelation.CONTRADICTORY:
                 return EvidenceAssessment(
                     contract_name=contract.name,
                     verdict=EvidenceVerdict.CONFLICTING_EVIDENCE,
                     summary=(
-                        f"Conflicting evidence: time difference ({diff_ms:.1f}ms) between events is within clock "
-                        f"uncertainty threshold ({max_clock_uncertainty_ms:.1f}ms) with no explicit parent span link."
+                        f"Conflicting evidence: causal cycle or contradictory link ordering detected "
+                        f"between candidate '{req.event_id}' and target '{target.event_id}'."
                     ),
                     support_obs_ids=tuple(dict.fromkeys(target.derived_from + req.derived_from)),
-                    assumptions=(
-                        f"Clock uncertainty of {max_clock_uncertainty_ms}ms prevents definitive ordering",
-                    ),
+                    assumptions=("Contradictory causal relationships prevent ordering",),
                 )
 
             if rule.operator == ContractOperator.PRECEDING_EVENT:
-                delta_sec = (target_time - req_time).total_seconds()
-                if delta_sec < 0:
-                    # Occurred after target!
+                if causal_rel == CausalRelation.BEFORE:
+                    # req causally precedes target (req ≺ target)
+                    min_delta, _ = req_interval.separation_seconds_range(target_interval)
+                    if min_delta > rule.max_window_seconds:
+                        gap_assessment = check_sensor_gaps_or_sampling()
+                        if gap_assessment is not None:
+                            return gap_assessment
+                        all_refute_obs.extend(target.derived_from + req.derived_from)
+                        target_refute_assessment = EvidenceAssessment(
+                            contract_name=contract.name,
+                            verdict=EvidenceVerdict.REFUTED,
+                            summary=(
+                                f"Refuted: '{rule.required_operation}' preceded target but exceeded max allowed window "
+                                f"({min_delta:.1f}s > {rule.max_window_seconds:.1f}s)."
+                            ),
+                            refute_obs_ids=tuple(dict.fromkeys(all_refute_obs)),
+                        )
+                    else:
+                        all_support_obs.extend(target.derived_from + req.derived_from)
+                        target_satisfied = True
+                        break
+
+                elif causal_rel == CausalRelation.AFTER:
+                    # target causally precedes req (target ≺ req)
                     gap_assessment = check_sensor_gaps_or_sampling()
                     if gap_assessment is not None:
                         return gap_assessment
                     all_refute_obs.extend(target.derived_from + req.derived_from)
-                    return EvidenceAssessment(
+                    target_refute_assessment = EvidenceAssessment(
                         contract_name=contract.name,
                         verdict=EvidenceVerdict.REFUTED,
-                        summary=f"Refuted: '{rule.required_operation}' occurred after '{rule.target_operation}' (delta: {delta_sec:.2f}s).",
-                        refute_obs_ids=tuple(dict.fromkeys(all_refute_obs)),
-                    )
-                if delta_sec > rule.max_window_seconds:
-                    gap_assessment = check_sensor_gaps_or_sampling()
-                    if gap_assessment is not None:
-                        return gap_assessment
-                    all_refute_obs.extend(target.derived_from + req.derived_from)
-                    return EvidenceAssessment(
-                        contract_name=contract.name,
-                        verdict=EvidenceVerdict.REFUTED,
-                        summary=(
-                            f"Refuted: '{rule.required_operation}' preceded target but exceeded max allowed window "
-                            f"({delta_sec:.1f}s > {rule.max_window_seconds:.1f}s)."
-                        ),
+                        summary=f"Refuted: '{rule.required_operation}' occurred after '{rule.target_operation}' (causally follows target).",
                         refute_obs_ids=tuple(dict.fromkeys(all_refute_obs)),
                     )
 
-                # Preceding event satisfied!
-                all_support_obs.extend(target.derived_from + req.derived_from)
+                else:
+                    # CausalRelation.CONCURRENT (req ∥ target)
+                    if req_interval.overlaps(target_interval):
+                        fact = MissingFact(
+                            field_name="clock_sync",
+                            reason=MissingReason.CLOCK_AMBIGUITY,
+                            required_for=rule.required_operation,
+                            recoverability=Recoverability.INSTRUMENTABLE,
+                        )
+                        diff_ms = (
+                            abs((target.time.start - req.time.start).total_seconds() * 1000.0)
+                            if target.time.start and req.time.start
+                            else 0.0
+                        )
+                        max_u = max(
+                            req_interval.uncertainty_ms,
+                            target_interval.uncertainty_ms,
+                            max_clock_uncertainty_ms,
+                        )
+                        target_conflicting_assessment = EvidenceAssessment(
+                            contract_name=contract.name,
+                            verdict=EvidenceVerdict.CONFLICTING_EVIDENCE,
+                            summary=(
+                                f"Conflicting evidence: time difference ({diff_ms:.1f}ms) between events is within clock "
+                                f"uncertainty threshold ({max_u:.1f}ms) with no explicit parent span link."
+                            ),
+                            support_obs_ids=tuple(
+                                dict.fromkeys(target.derived_from + req.derived_from)
+                            ),
+                            missing_facts=(fact,),
+                            remedies=(get_remedy_for_missing_fact(fact),),
+                            assumptions=(
+                                f"Clock uncertainty of {max_u}ms prevents definitive ordering",
+                            ),
+                        )
+                    elif req_interval.precedes(target_interval):
+                        min_delta, _ = req_interval.separation_seconds_range(target_interval)
+                        if min_delta > rule.max_window_seconds:
+                            gap_assessment = check_sensor_gaps_or_sampling()
+                            if gap_assessment is not None:
+                                return gap_assessment
+                            all_refute_obs.extend(target.derived_from + req.derived_from)
+                            target_refute_assessment = EvidenceAssessment(
+                                contract_name=contract.name,
+                                verdict=EvidenceVerdict.REFUTED,
+                                summary=(
+                                    f"Refuted: '{rule.required_operation}' preceded target but exceeded max allowed window "
+                                    f"({min_delta:.1f}s > {rule.max_window_seconds:.1f}s)."
+                                ),
+                                refute_obs_ids=tuple(dict.fromkeys(all_refute_obs)),
+                            )
+                        else:
+                            all_support_obs.extend(target.derived_from + req.derived_from)
+                            target_satisfied = True
+                            break
+                    else:
+                        # target strictly precedes req
+                        delta_sec = (
+                            (req.time.start - target.time.start).total_seconds()
+                            if req.time.start and target.time.start
+                            else 0.0
+                        )
+                        gap_assessment = check_sensor_gaps_or_sampling()
+                        if gap_assessment is not None:
+                            return gap_assessment
+                        all_refute_obs.extend(target.derived_from + req.derived_from)
+                        target_refute_assessment = EvidenceAssessment(
+                            contract_name=contract.name,
+                            verdict=EvidenceVerdict.REFUTED,
+                            summary=f"Refuted: '{rule.required_operation}' occurred after '{rule.target_operation}' (delta: {delta_sec:.2f}s).",
+                            refute_obs_ids=tuple(dict.fromkeys(all_refute_obs)),
+                        )
 
             elif rule.operator == ContractOperator.EVENTUALLY_WITHIN:
-                delta_sec = (req_time - target_time).total_seconds()
-                if delta_sec < 0:
+                if causal_rel == CausalRelation.AFTER:
+                    # target causally precedes req (target ≺ req)
+                    min_delta, _ = target_interval.separation_seconds_range(req_interval)
+                    if min_delta > rule.max_window_seconds:
+                        gap_assessment = check_sensor_gaps_or_sampling()
+                        if gap_assessment is not None:
+                            return gap_assessment
+                        all_refute_obs.extend(target.derived_from + req.derived_from)
+                        target_refute_assessment = EvidenceAssessment(
+                            contract_name=contract.name,
+                            verdict=EvidenceVerdict.REFUTED,
+                            summary=f"Refuted: '{rule.required_operation}' exceeded max follow-up window ({min_delta:.1f}s).",
+                            refute_obs_ids=tuple(dict.fromkeys(all_refute_obs)),
+                        )
+                    else:
+                        all_support_obs.extend(target.derived_from + req.derived_from)
+                        target_satisfied = True
+                        break
+
+                elif causal_rel == CausalRelation.BEFORE:
+                    # req causally precedes target (req ≺ target)
                     gap_assessment = check_sensor_gaps_or_sampling()
                     if gap_assessment is not None:
                         return gap_assessment
                     all_refute_obs.extend(target.derived_from + req.derived_from)
-                    return EvidenceAssessment(
+                    target_refute_assessment = EvidenceAssessment(
                         contract_name=contract.name,
                         verdict=EvidenceVerdict.REFUTED,
                         summary=f"Refuted: '{rule.required_operation}' occurred before target when expected after.",
                         refute_obs_ids=tuple(dict.fromkeys(all_refute_obs)),
                     )
-                if delta_sec > rule.max_window_seconds:
-                    gap_assessment = check_sensor_gaps_or_sampling()
-                    if gap_assessment is not None:
-                        return gap_assessment
-                    all_refute_obs.extend(target.derived_from + req.derived_from)
-                    return EvidenceAssessment(
-                        contract_name=contract.name,
-                        verdict=EvidenceVerdict.REFUTED,
-                        summary=f"Refuted: '{rule.required_operation}' exceeded max follow-up window ({delta_sec:.1f}s).",
-                        refute_obs_ids=tuple(dict.fromkeys(all_refute_obs)),
-                    )
 
-                all_support_obs.extend(target.derived_from + req.derived_from)
+                else:
+                    # Concurrent (req ∥ target)
+                    if req_interval.overlaps(target_interval):
+                        fact = MissingFact(
+                            field_name="clock_sync",
+                            reason=MissingReason.CLOCK_AMBIGUITY,
+                            required_for=rule.required_operation,
+                            recoverability=Recoverability.INSTRUMENTABLE,
+                        )
+                        diff_ms = (
+                            abs((req.time.start - target.time.start).total_seconds() * 1000.0)
+                            if req.time.start and target.time.start
+                            else 0.0
+                        )
+                        max_u = max(
+                            req_interval.uncertainty_ms,
+                            target_interval.uncertainty_ms,
+                            max_clock_uncertainty_ms,
+                        )
+                        target_conflicting_assessment = EvidenceAssessment(
+                            contract_name=contract.name,
+                            verdict=EvidenceVerdict.CONFLICTING_EVIDENCE,
+                            summary=(
+                                f"Conflicting evidence: time difference ({diff_ms:.1f}ms) between events is within clock "
+                                f"uncertainty threshold ({max_u:.1f}ms) with no explicit parent span link."
+                            ),
+                            support_obs_ids=tuple(
+                                dict.fromkeys(target.derived_from + req.derived_from)
+                            ),
+                            missing_facts=(fact,),
+                            remedies=(get_remedy_for_missing_fact(fact),),
+                            assumptions=(
+                                f"Clock uncertainty of {max_u}ms prevents definitive ordering",
+                            ),
+                        )
+                    elif target_interval.precedes(req_interval):
+                        min_delta, _ = target_interval.separation_seconds_range(req_interval)
+                        if min_delta > rule.max_window_seconds:
+                            gap_assessment = check_sensor_gaps_or_sampling()
+                            if gap_assessment is not None:
+                                return gap_assessment
+                            all_refute_obs.extend(target.derived_from + req.derived_from)
+                            target_refute_assessment = EvidenceAssessment(
+                                contract_name=contract.name,
+                                verdict=EvidenceVerdict.REFUTED,
+                                summary=f"Refuted: '{rule.required_operation}' exceeded max follow-up window ({min_delta:.1f}s).",
+                                refute_obs_ids=tuple(dict.fromkeys(all_refute_obs)),
+                            )
+                        else:
+                            all_support_obs.extend(target.derived_from + req.derived_from)
+                            target_satisfied = True
+                            break
+                    else:
+                        gap_assessment = check_sensor_gaps_or_sampling()
+                        if gap_assessment is not None:
+                            return gap_assessment
+                        all_refute_obs.extend(target.derived_from + req.derived_from)
+                        target_refute_assessment = EvidenceAssessment(
+                            contract_name=contract.name,
+                            verdict=EvidenceVerdict.REFUTED,
+                            summary=f"Refuted: '{rule.required_operation}' occurred before target when expected after.",
+                            refute_obs_ids=tuple(dict.fromkeys(all_refute_obs)),
+                        )
+
+        if not target_satisfied:
+            if target_conflicting_assessment is not None:
+                return target_conflicting_assessment
+            if target_refute_assessment is not None:
+                return target_refute_assessment
 
     return EvidenceAssessment(
         contract_name=contract.name,

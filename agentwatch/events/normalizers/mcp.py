@@ -27,7 +27,7 @@ from agentwatch.evidence.model import RawObservation
 
 class MCPNormalizer(Normalizer):
     name = "mcp"
-    version = "1"
+    version = "2"
     source_kinds = frozenset({"mcp.message"})
     maturity = "EXPERIMENTAL"
 
@@ -38,7 +38,8 @@ class MCPNormalizer(Normalizer):
         self, observations: Sequence[RawObservation], ctx: NormalizeContext
     ) -> NormalizeResult:
         result = NormalizeResult()
-        pairs: dict[tuple[str, str], dict[str, RawObservation]] = {}
+        calls: list[tuple[str, str, dict[str, RawObservation]]] = []
+        open_requests: dict[tuple[str, str], dict[str, RawObservation]] = {}
         notes: list[RawObservation] = []
         for obs in source_order(observations):
             p = obs.payload()
@@ -47,20 +48,38 @@ class MCPNormalizer(Normalizer):
             if jid is None:
                 notes.append(obs)
                 continue
-            key = (obs.declared("mcp_session") or "", jid)
-            slot = "request" if "method" in msg else "response"
-            pairs.setdefault(key, {})[slot] = obs
-        for (session, jid), parts in pairs.items():
+            session = obs.declared("mcp_session") or ""
+            key = (session, jid)
+            if "method" in msg:
+                parts: dict[str, RawObservation] = {"request": obs}
+                open_requests[key] = parts
+                calls.append((session, jid, parts))
+            else:
+                if key in open_requests:
+                    open_requests[key]["response"] = obs
+                    del open_requests[key]
+                else:
+                    parts = {"response": obs}
+                    calls.append((session, jid, parts))
+        for session, jid, parts in calls:
             result.events.append(self._call(session, jid, parts, ctx, result))
         for obs in notes:
             b = EventBuilder(self, ctx, [obs])
             p = obs.payload()
+            msg = p.get("message") or {}
+            method = str(msg.get("method") or "unknown")
             b.kind = EventKind.MESSAGE
-            b.operation = f"notification:{(p.get('message') or {}).get('method')}"
+            b.operation = f"notification:{method}"
             b.object = EntityRef("mcp_server", str(p.get("server")))
-            b.input(p.get("message"), role="message")
+            b.input(msg.get("params") or msg, role="message")
             b.status = EventStatus.OK
             b.time = temporal(obs)
+            if obs.declared("parent_span_id"):
+                b.parents.append(
+                    DeclaredLink("parent", "native.span", obs.declared("parent_span_id") or "")
+                )
+            if obs.declared("run_id"):
+                b.run_key = ("native.run", obs.declared("run_id") or "")
             result.events.append(b.build())
         return result
 
@@ -84,13 +103,21 @@ class MCPNormalizer(Normalizer):
         params = rq.get("params") or {}
         if method == "tools/call":
             b.kind = EventKind.TOOL_INVOCATION
-            b.operation = str(params.get("name"))
-            b.object = EntityRef("tool", f"mcp/{server}/{params.get('name')}")
-            b.input(params.get("arguments") or {}, role="arguments")
-        elif method in ("resources/read", "prompts/get"):
+            tool_name = str(params.get("name") or "unknown_tool")
+            b.operation = tool_name
+            b.object = EntityRef("tool", f"mcp/{server}/{tool_name}")
+            b.input(params.get("arguments") or {}, role="arguments", label=tool_name)
+        elif method in ("resources/read", "resources/list", "prompts/get", "prompts/list"):
             b.kind = EventKind.RETRIEVAL
             b.operation = method
-            b.object = EntityRef("mcp_server", str(server))
+            if method == "resources/read" and params.get("uri"):
+                uri = str(params["uri"])
+                b.object = EntityRef("mcp_resource", f"mcp/{server}/{uri}")
+            elif method == "prompts/get" and params.get("name"):
+                pname = str(params["name"])
+                b.object = EntityRef("mcp_prompt", f"mcp/{server}/{pname}")
+            else:
+                b.object = EntityRef("mcp_server", str(server))
             b.input(params, role="query")
             b.effects.append(Effect(EffectKind.READ, b.object.canonical))
         else:
@@ -100,13 +127,41 @@ class MCPNormalizer(Normalizer):
             if params:
                 b.input(params, role="params")
         if "result" in rs:
-            b.output(rs["result"], role="result")
-            b.status = (
-                EventStatus.ERROR if (rs.get("result") or {}).get("isError") else EventStatus.OK
-            )
+            res_val = rs["result"]
+            is_err = bool(res_val.get("isError")) if isinstance(res_val, dict) else False
+            if method == "resources/read" and isinstance(res_val, dict) and "contents" in res_val:
+                b.output(res_val["contents"], role="resource")
+            elif method == "prompts/get" and isinstance(res_val, dict) and "messages" in res_val:
+                b.output(res_val["messages"], role="prompt")
+            else:
+                b.output(res_val, role="result")
+
+            if is_err:
+                b.status = EventStatus.ERROR
+                err_msg = "Tool execution failed"
+                if isinstance(res_val, dict) and isinstance(res_val.get("content"), list):
+                    texts = [
+                        c.get("text")
+                        for c in res_val["content"]
+                        if isinstance(c, dict) and c.get("text")
+                    ]
+                    if texts:
+                        err_msg = "; ".join(str(t) for t in texts)
+                b.error = {"type": "ToolExecutionError", "message": err_msg}
+            else:
+                b.status = EventStatus.OK
         elif "error" in rs:
             b.status = EventStatus.ERROR
-            b.error = rs["error"]
+            err_val = rs["error"]
+            if isinstance(err_val, dict):
+                b.error = {
+                    "type": "JSONRPCError",
+                    "code": err_val.get("code"),
+                    "message": str(err_val.get("message") or "JSON-RPC error"),
+                    "data": err_val.get("data"),
+                }
+            else:
+                b.error = {"type": "JSONRPCError", "message": str(err_val)}
         else:
             b.status = EventStatus.UNKNOWN
             result.diagnostics.append(

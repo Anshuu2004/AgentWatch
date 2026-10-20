@@ -194,35 +194,76 @@ class OTelNormalizer(Normalizer):
             b.output(a["gen_ai.completion"], role="completion")
         if a.get("gen_ai.output.messages") is not None:
             b.output(a["gen_ai.output.messages"], role="completion")
-        if a.get("gen_ai.tool.call.arguments") is not None:
-            b.input(a["gen_ai.tool.call.arguments"], role="arguments")
-        if a.get("gen_ai.tool.call.result") is not None:
-            b.output(a["gen_ai.tool.call.result"], role="result")
+        tool_args = a.get("gen_ai.tool.call.arguments")
+        if tool_args is None:
+            tool_args = a.get("gen_ai.tool.arguments")
+        if tool_args is not None:
+            b.input(tool_args, role="arguments")
+        tool_res = a.get("gen_ai.tool.call.result")
+        if tool_res is None:
+            tool_res = a.get("gen_ai.tool.result")
+        if tool_res is not None:
+            b.output(tool_res, role="result")
         for ev in sp.get("events") or []:
             ea = ev.get("attributes") or {}
             en = str(ev.get("name") or "")
             body = (
                 ea.get("gen_ai.prompt")
-                or ea.get("gen_ai.completion")
-                or ea.get("content")
-                or ea.get("body")
+                if ea.get("gen_ai.prompt") is not None
+                else ea.get("gen_ai.completion")
+                if ea.get("gen_ai.completion") is not None
+                else ea.get("content")
+                if ea.get("content") is not None
+                else ea.get("body")
+                if ea.get("body") is not None
+                else ea.get("message")
             )
-            if body is None:
-                continue
-            if en in (
-                "gen_ai.content.prompt",
-                "gen_ai.user.message",
-                "gen_ai.system.message",
-                "gen_ai.tool.message",
-            ):
-                b.input(body, role="prompt")
-            elif en in ("gen_ai.content.completion", "gen_ai.choice", "gen_ai.assistant.message"):
-                b.output(body, role="completion")
+            if body is not None:
+                if en in (
+                    "gen_ai.content.prompt",
+                    "gen_ai.user.message",
+                    "gen_ai.system.message",
+                    "gen_ai.tool.message",
+                ):
+                    b.input(body, role="prompt")
+                elif en in (
+                    "gen_ai.content.completion",
+                    "gen_ai.choice",
+                    "gen_ai.assistant.message",
+                ):
+                    b.output(body, role="completion")
+            if en == "gen_ai.choice" and ea.get("finish_reason"):
+                reasons = b.attributes.get("gen_ai.response.finish_reasons")
+                if reasons is None:
+                    b.attributes["gen_ai.response.finish_reasons"] = [ea["finish_reason"]]
+                elif isinstance(reasons, list):
+                    if ea["finish_reason"] not in reasons:
+                        reasons.append(ea["finish_reason"])
+
+        tokens_in = a.get("gen_ai.usage.input_tokens")
+        if tokens_in is None:
+            tokens_in = a.get("gen_ai.usage.prompt_tokens")
+        tokens_out = a.get("gen_ai.usage.output_tokens")
+        if tokens_out is None:
+            tokens_out = a.get("gen_ai.usage.completion_tokens")
+        tokens_total = a.get("gen_ai.usage.total_tokens")
+        if tokens_total is None and tokens_in is not None and tokens_out is not None:
+            tokens_total = tokens_in + tokens_out
+
+        cache_read = a.get("gen_ai.usage.cache_read_input_tokens")
+        if cache_read is None:
+            cache_read = a.get("gen_ai.usage.cache_read_tokens")
+
+        cache_creation = a.get("gen_ai.usage.cache_creation_input_tokens")
+        if cache_creation is None:
+            cache_creation = a.get("gen_ai.usage.cache_creation_tokens")
 
         usage = {
-            "tokens_in": a.get("gen_ai.usage.input_tokens") or a.get("gen_ai.usage.prompt_tokens"),
-            "tokens_out": a.get("gen_ai.usage.output_tokens")
-            or a.get("gen_ai.usage.completion_tokens"),
+            "tokens_in": tokens_in,
+            "tokens_out": tokens_out,
+            "tokens_total": tokens_total,
+            "cache_read_tokens": cache_read,
+            "cache_creation_tokens": cache_creation,
         }
         start, end = _ns(sp.get("start_time_unix_nano")), _ns(sp.get("end_time_unix_nano"))
         b.resources = {k: v for k, v in usage.items() if v is not None}
@@ -249,6 +290,22 @@ class OTelNormalizer(Normalizer):
                 "otel.scope": sp.get("scope"),
             }
         )
+        for genai_attr in (
+            "gen_ai.request.temperature",
+            "gen_ai.request.top_p",
+            "gen_ai.request.max_tokens",
+            "gen_ai.request.stop_sequences",
+            "gen_ai.request.presence_penalty",
+            "gen_ai.request.frequency_penalty",
+            "gen_ai.request.seed",
+            "gen_ai.response.id",
+            "gen_ai.response.finish_reasons",
+            "gen_ai.response.model",
+            "gen_ai.tool.call.id",
+            "gen_ai.tool.name",
+        ):
+            if a.get(genai_attr) is not None:
+                b.attributes[genai_attr] = a[genai_attr]
         if service:
             b.attributes["service.name"] = service
         if res.get("service.version"):

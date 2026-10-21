@@ -804,6 +804,44 @@ class SafetyEngine:
         self._policy = policy
         self._scorer = RiskScorer(extra_patterns=policy.custom_patterns)
 
+    def evaluate(self, tool_call: ToolCallData) -> SafetyCheckData:
+        """Synchronously evaluate safety for a tool call.
+
+        Args:
+            tool_call: Tool invocation to evaluate.
+
+        Returns:
+            :class:`SafetyCheckData` containing risk assessment and block decisions.
+        """
+        event = AgentEvent(
+            session_id="sync-eval",
+            agent_id="unknown",
+            framework=AgentFramework.CLAUDE_CODE,
+            event_type=EventType.TOOL_CALL,
+            tool_call=tool_call,
+        )
+
+        self._checked_count += 1
+        safety_data, block_decision = self._evaluate_safety(event)
+
+        final_block = block_decision or safety_data.requires_approval
+        if final_block:
+            self._blocked_count += 1
+            if safety_data.requires_approval:
+                safety_data.reasons.append(
+                    "Sync path cannot request human approval; blocked for safety."
+                )
+
+            logger.warning(
+                "BLOCKED (sync) [%s] risk=%s: %s",
+                tool_call.tool_name,
+                safety_data.risk_level.value,
+                safety_data.reasons,
+            )
+
+        safety_data.blocked = final_block
+        return safety_data
+
     def check_tool_call_sync(self, tool_call: ToolCallData) -> tuple[bool, list[str]]:
         """Synchronous risk check — consistent with async check_event logic.
 
@@ -819,36 +857,8 @@ class SafetyEngine:
             ``(blocked, reasons)`` — ``blocked`` is ``True`` when the call
             must be prevented immediately.
         """
-        # Create a transient event for evaluation
-        event = AgentEvent(
-            session_id="sync-check",
-            agent_id="unknown",
-            framework=AgentFramework.CLAUDE_CODE,  # Default
-            event_type=EventType.TOOL_CALL,
-            tool_call=tool_call,
-        )
-
-        self._checked_count += 1
-        safety_data, block_decision = self._evaluate_safety(event)
-
-        # Fail-safe: if the decision was REQUIRE_APPROVAL, we must block in sync path
-        final_block = block_decision or safety_data.requires_approval
-
-        if final_block:
-            self._blocked_count += 1
-            if safety_data.requires_approval:
-                safety_data.reasons.append(
-                    "Sync path cannot request human approval; blocked for safety."
-                )
-
-            logger.warning(
-                "BLOCKED (sync) [%s] risk=%s: %s",
-                tool_call.tool_name,
-                safety_data.risk_level.value,
-                safety_data.reasons,
-            )
-
-        return final_block, safety_data.reasons
+        safety_data = self.evaluate(tool_call)
+        return safety_data.blocked, safety_data.reasons
 
     def stats(self) -> dict[str, int]:
         """Return counters for checked, blocked, and approved events.

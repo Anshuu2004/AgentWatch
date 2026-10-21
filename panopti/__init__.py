@@ -27,7 +27,12 @@ try:
     )
 
     PanoptiBlockedError = AgentWatchBlockedError
-    guard = watch
+    try:
+        from panopti.guard import GuardDecision, PanoptiGuard, guard
+    except ImportError:
+        guard = watch  # type: ignore[assignment]
+        PanoptiGuard = None  # type: ignore[assignment]
+        GuardDecision = None  # type: ignore[assignment]
 except ImportError:  # pragma: no cover
     # Dependencies not fully installed in current environment
     watch = None  # type: ignore[assignment]
@@ -44,6 +49,8 @@ except ImportError:  # pragma: no cover
     LoopDetector = None  # type: ignore[assignment]
     AgentLoopError = Exception  # type: ignore[assignment,misc]
     AgentLoopException = AgentLoopError
+    PanoptiGuard = None  # type: ignore[assignment]
+    GuardDecision = None  # type: ignore[assignment]
 
 __all__ = [
     "__version__",
@@ -61,4 +68,6 @@ __all__ = [
     "LoopDetector",
     "AgentLoopError",
     "AgentLoopException",
+    "PanoptiGuard",
+    "GuardDecision",
 ]

@@ -74,13 +74,14 @@ class PanoptiGuard:
         if confidence is not None:
             step_record = self._confidence_tracker.add_step(confidence)
             if step_record.warning:
+                msg = f"{step_record.warning.code}: {step_record.warning.message}"
                 return GuardDecision(
                     allowed=False,
                     blocked=True,
                     risk_level="CRITICAL",
                     risk_score=1.0,
-                    reason=step_record.warning.message,
-                    reasons=[step_record.warning.message],
+                    reason=msg,
+                    reasons=[msg],
                 )
 
         # 2. Loop and oscillation check

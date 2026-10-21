@@ -1,7 +1,7 @@
 """Panopti: The All-Seeing Pre-Execution Guardrail & Forensic Engine for Autonomous AI.
 
 Panopti is the successor to AgentWatch, providing pre-execution contract verification,
-causal confidence decay tracking, and deterministic forensic shadow replay for agent swarms.
+causal confidence decay tracking, cryptographic witness proofs, and deterministic forensic shadow replay for agent swarms.
 """
 
 from __future__ import annotations
@@ -25,16 +25,31 @@ try:
         detect_framework_label,
         watch,
     )
+    from panopti.contracts import (
+        Contract,
+        ContractRegistry,
+        ContractViolationError,
+        Disallows,
+        MaxFrequency,
+        RequiresPrior,
+    )
+    from panopti.court import (
+        WitnessChain,
+        WitnessEntry,
+    )
+    from panopti.doctor import run_diagnostics
+    from panopti.guard import (
+        GuardDecision,
+        PanoptiGuard,
+        guard,
+    )
+    from panopti.mesh import (
+        SwarmAgentNode,
+        SwarmMesh,
+    )
 
     PanoptiBlockedError = AgentWatchBlockedError
-    try:
-        from panopti.guard import GuardDecision, PanoptiGuard, guard
-    except ImportError:
-        guard = watch  # type: ignore[assignment]
-        PanoptiGuard = None  # type: ignore[assignment]
-        GuardDecision = None  # type: ignore[assignment]
 except ImportError:  # pragma: no cover
-    # Dependencies not fully installed in current environment
     watch = None  # type: ignore[assignment]
     guard = None  # type: ignore[assignment]
     detect_framework = None  # type: ignore[assignment]
@@ -51,6 +66,17 @@ except ImportError:  # pragma: no cover
     AgentLoopException = AgentLoopError
     PanoptiGuard = None  # type: ignore[assignment]
     GuardDecision = None  # type: ignore[assignment]
+    Contract = None  # type: ignore[assignment]
+    ContractRegistry = None  # type: ignore[assignment]
+    RequiresPrior = None  # type: ignore[assignment]
+    Disallows = None  # type: ignore[assignment]
+    MaxFrequency = None  # type: ignore[assignment]
+    ContractViolationError = Exception  # type: ignore[assignment,misc]
+    WitnessEntry = None  # type: ignore[assignment]
+    WitnessChain = None  # type: ignore[assignment]
+    SwarmAgentNode = None  # type: ignore[assignment]
+    SwarmMesh = None  # type: ignore[assignment]
+    run_diagnostics = None  # type: ignore[assignment]
 
 __all__ = [
     "__version__",
@@ -70,4 +96,15 @@ __all__ = [
     "AgentLoopException",
     "PanoptiGuard",
     "GuardDecision",
+    "Contract",
+    "ContractRegistry",
+    "RequiresPrior",
+    "Disallows",
+    "MaxFrequency",
+    "ContractViolationError",
+    "WitnessEntry",
+    "WitnessChain",
+    "SwarmAgentNode",
+    "SwarmMesh",
+    "run_diagnostics",
 ]

@@ -12,6 +12,14 @@ from agentwatch.circuit_breaker.loop_detector import AgentLoopError, LoopDetecto
 from agentwatch.core.safety import SafetyEngine
 from agentwatch.core.schema import ToolCallData
 from agentwatch.core.watcher import AgentWatchBlockedError, watch
+from panopti.contracts import (
+    Contract,
+    ContractRegistry,
+    ContractViolationError,
+    Disallows,
+    MaxFrequency,
+    RequiresPrior,
+)
 
 logger = logging.getLogger("panopti.guard")
 
@@ -36,11 +44,22 @@ class PanoptiGuard:
     def __init__(self) -> None:
         self._safety_engine = SafetyEngine()
         self._loop_detector = LoopDetector(window_size=10, max_repeats=3, max_oscillations=2)
+        self._contracts = ContractRegistry()
+
+    def register_contract(self, contract: Contract) -> None:
+        """Register a temporal or state invariant contract."""
+        self._contracts.add(contract)
+
+    def record_execution(
+        self, tool_name: str, arguments: dict[str, Any] | None = None
+    ) -> None:
+        """Record successful tool execution in history for temporal contract tracking."""
+        self._contracts.record_success(tool_name, arguments)
 
     def check(
         self, tool_name: str, arguments: dict[str, Any] | None = None
     ) -> GuardDecision:
-        """Evaluate a tool invocation against safety policies and loops before execution."""
+        """Evaluate a tool invocation against safety policies, contracts, and loops before execution."""
         args = arguments or {}
 
         # 1. Loop and oscillation check
@@ -55,7 +74,19 @@ class PanoptiGuard:
                 reasons=[loop_warning],
             )
 
-        # 2. Safety policy check
+        # 2. Invariant contracts check
+        contract_allowed, contract_violation = self._contracts.evaluate(tool_name, args)
+        if not contract_allowed:
+            return GuardDecision(
+                allowed=False,
+                blocked=True,
+                risk_level="HIGH",
+                risk_score=0.9,
+                reason=contract_violation,
+                reasons=[contract_violation or "Contract violation"],
+            )
+
+        # 3. Safety policy check
         raw_cmd = args.get("cmd") or args.get("command") or args.get("script") or None
         tool_data = ToolCallData(
             tool_name=tool_name,
@@ -99,13 +130,23 @@ class PanoptiGuard:
         name: str | None = None,
         *,
         max_repeats: int = 3,
+        requires_prior: str | None = None,
+        max_frequency: tuple[int, int] | None = None,
         raise_on_block: bool = True,
     ) -> Callable[[F], F]:
-        """Decorator shielding a tool function with pre-execution safety and loop traps."""
+        """Decorator shielding a tool function with pre-execution safety and invariant contracts."""
 
         def decorator(fn: F) -> F:
             tool_name = name or fn.__name__
             sig = inspect.signature(fn)
+
+            if requires_prior:
+                self.register_contract(RequiresPrior(tool_name, requires_prior))
+            if max_frequency:
+                max_invocations, window_steps = max_frequency
+                self.register_contract(
+                    MaxFrequency(tool_name, max_invocations=max_invocations, window_steps=window_steps)
+                )
 
             @functools.wraps(fn)
             def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -123,6 +164,13 @@ class PanoptiGuard:
                                 pattern=tool_name,
                                 occurrences=max_repeats,
                             )
+                    if "contract violation" in reason_lower:
+                        if raise_on_block:
+                            raise ContractViolationError(
+                                decision.reason or "Contract violation",
+                                contract_name=tool_name,
+                                tool_name=tool_name,
+                            )
                     if raise_on_block:
                         raise AgentWatchBlockedError(
                             decision.reason or "Blocked by Panopti",
@@ -131,7 +179,9 @@ class PanoptiGuard:
                         )
                     return {"error": decision.reason, "blocked": True}
 
-                return fn(*args, **kwargs)
+                result = fn(*args, **kwargs)
+                self.record_execution(tool_name, arguments)
+                return result
 
             return wrapper  # type: ignore[return-value]
 

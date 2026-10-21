@@ -99,7 +99,7 @@ all = [
 ]
 
 [project.scripts]
-panopti = "agentwatch.cli.main:main"
+panopti = "panopti.cli:main"
 agentwatch = "agentwatch.cli.main:main"
 
 [project.urls]

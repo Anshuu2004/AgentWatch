@@ -80,6 +80,7 @@ def test_circuit_breaker_trips_on_repetitive_tool_loop() -> None:
             tool_call=ToolCallData(
                 tool_name="bash_exec",
                 arguments={"cmd": "grep -r pattern"},
+                raw_command="grep -r pattern",
             ),
         )
         assert cb.observe(ev) is CircuitState.CLOSED
@@ -94,6 +95,7 @@ def test_circuit_breaker_trips_on_repetitive_tool_loop() -> None:
         tool_call=ToolCallData(
             tool_name="bash_exec",
             arguments={"cmd": "grep -r pattern"},
+            raw_command="grep -r pattern",
         ),
     )
     assert cb.observe(trip_ev) is CircuitState.OPEN

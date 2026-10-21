@@ -86,7 +86,8 @@ class LoopDetector:
 
     def check_traps(self) -> str | None:
         """Evaluate history for identical repetitions or periodic parameter oscillations."""
-        if len(self._history) < self.max_repeats:
+        min_required = min(self.max_repeats, 2 * self.max_oscillations)
+        if len(self._history) < min_required:
             return None
 
         recent = list(self._history)

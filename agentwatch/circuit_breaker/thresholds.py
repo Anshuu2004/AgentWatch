@@ -35,6 +35,9 @@ class CircuitThresholds:
     max_hallucinations: int = 3
     min_confidence: float = 0.35
     half_open_probe_successes: int = 2
+    max_tool_repeats: int = 3
+    max_parameter_oscillations: int = 2
+    loop_window_size: int = 10
 
     def __post_init__(self) -> None:
         # Fail loudly on nonsensical configuration rather than silently
@@ -51,3 +54,9 @@ class CircuitThresholds:
             raise ValueError("min_confidence must be within [0.0, 1.0]")
         if self.half_open_probe_successes < 1:
             raise ValueError("half_open_probe_successes must be >= 1")
+        if self.max_tool_repeats < 0:
+            raise ValueError("max_tool_repeats must be >= 0")
+        if self.max_parameter_oscillations < 0:
+            raise ValueError("max_parameter_oscillations must be >= 0")
+        if self.loop_window_size < 2:
+            raise ValueError("loop_window_size must be >= 2")

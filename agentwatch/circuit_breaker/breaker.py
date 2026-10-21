@@ -35,6 +35,7 @@ from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
+from agentwatch.circuit_breaker.loop_detector import AgentLoopException, LoopDetector
 from agentwatch.circuit_breaker.thresholds import CircuitThresholds
 from agentwatch.core.schema import AgentEvent, EventType, ExecutionStatus
 
@@ -55,6 +56,8 @@ class TripReason(str, Enum):
     HALLUCINATIONS = "hallucination_threshold_exceeded"
     PROBE_FAILED = "half_open_probe_failed"
     MANUAL = "manual_trip"
+    REPETITIVE_LOOP = "repetitive_tool_loop_detected"
+    PARAMETER_OSCILLATION = "parameter_oscillation_detected"
 
 
 # Which allowed target states each state may move to. Used to reject invalid
@@ -119,6 +122,14 @@ class CircuitBreaker:
 
         # HALF_OPEN probe tracking.
         self._probe_successes = 0
+
+        # Loop and oscillation detector
+        self._loop_detector = LoopDetector(
+            window_size=self.thresholds.loop_window_size,
+            max_repeats=self.thresholds.max_tool_repeats or 999999,
+            max_oscillations=self.thresholds.max_parameter_oscillations or 999999,
+        )
+        self._last_loop_warning: str | None = None
 
         # The most recent checkpoint created by pause(), used by resume().
         self._last_checkpoint_id: str | None = None
@@ -198,6 +209,12 @@ class CircuitBreaker:
         if self._is_hallucination(event):
             self._hallucinations += 1
 
+        if event.tool_call is not None:
+            self._last_loop_warning = self._loop_detector.record(
+                event.tool_call.tool_name,
+                event.tool_call.arguments,
+            )
+
     @staticmethod
     def _is_error(event: AgentEvent) -> bool:
         return event.status in (
@@ -236,6 +253,10 @@ class CircuitBreaker:
             return TripReason.TOTAL_ERRORS
         if t.max_hallucinations and self._hallucinations >= t.max_hallucinations:
             return TripReason.HALLUCINATIONS
+        if self._last_loop_warning is not None:
+            if "oscillation" in self._last_loop_warning.lower():
+                return TripReason.PARAMETER_OSCILLATION
+            return TripReason.REPETITIVE_LOOP
         return None
 
     def _evaluate_probe(self, event: AgentEvent) -> None:
@@ -381,6 +402,8 @@ class CircuitBreaker:
         self._hallucinations = 0
         self._events_observed = 0
         self._probe_successes = 0
+        self._loop_detector.reset()
+        self._last_loop_warning = None
 
     def _record_for_eu_ai_act(self, record: TransitionRecord) -> None:
         """Log the transition for EU AI Act Article 12 record-keeping.

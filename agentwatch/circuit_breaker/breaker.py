@@ -35,7 +35,7 @@ from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
-from agentwatch.circuit_breaker.loop_detector import AgentLoopException, LoopDetector
+from agentwatch.circuit_breaker.loop_detector import LoopDetector
 from agentwatch.circuit_breaker.thresholds import CircuitThresholds
 from agentwatch.core.schema import AgentEvent, EventType, ExecutionStatus
 

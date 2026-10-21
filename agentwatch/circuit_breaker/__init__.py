@@ -14,6 +14,7 @@ from agentwatch.circuit_breaker.breaker import (
     TripReason,
 )
 from agentwatch.circuit_breaker.loop_detector import (
+    AgentLoopError,
     AgentLoopException,
     LoopDetector,
     ToolCallFingerprint,
@@ -27,6 +28,7 @@ __all__ = [
     "TransitionRecord",
     "CircuitThresholds",
     "LoopDetector",
+    "AgentLoopError",
     "AgentLoopException",
     "ToolCallFingerprint",
 ]

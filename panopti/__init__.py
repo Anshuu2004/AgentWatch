@@ -10,6 +10,7 @@ from agentwatch._version import __version__
 
 try:
     from agentwatch.circuit_breaker import (
+        AgentLoopError,
         AgentLoopException,
         CircuitBreaker,
         CircuitState,
@@ -41,7 +42,8 @@ except ImportError:  # pragma: no cover
     CircuitThresholds = None  # type: ignore[assignment]
     TripReason = None  # type: ignore[assignment]
     LoopDetector = None  # type: ignore[assignment]
-    AgentLoopException = Exception  # type: ignore[assignment,misc]
+    AgentLoopError = Exception  # type: ignore[assignment,misc]
+    AgentLoopException = AgentLoopError
 
 __all__ = [
     "__version__",
@@ -57,5 +59,6 @@ __all__ = [
     "CircuitThresholds",
     "TripReason",
     "LoopDetector",
+    "AgentLoopError",
     "AgentLoopException",
 ]

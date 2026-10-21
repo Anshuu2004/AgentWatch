@@ -13,13 +13,17 @@ from dataclasses import dataclass
 from typing import Any
 
 
-class AgentLoopException(Exception):
+class AgentLoopError(Exception):
     """Raised when an agent is caught in a repetitive tool-call or oscillation loop."""
 
     def __init__(self, message: str, pattern: str, occurrences: int) -> None:
         super().__init__(message)
         self.pattern = pattern
         self.occurrences = occurrences
+
+
+# Backward-compatible alias
+AgentLoopException = AgentLoopError
 
 
 @dataclass(frozen=True)
@@ -60,8 +64,8 @@ class LoopDetector:
         except Exception:
             canonical_json = str(arguments)
 
-        args_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()[:16]
-        raw_hash = hashlib.sha256(f"{tool_name}:{canonical_json}".encode("utf-8")).hexdigest()[:16]
+        args_hash = hashlib.sha256(canonical_json.encode()).hexdigest()[:16]
+        raw_hash = hashlib.sha256(f"{tool_name}:{canonical_json}".encode()).hexdigest()[:16]
         return ToolCallFingerprint(tool_name=tool_name, args_hash=args_hash, raw_hash=raw_hash)
 
     def record(self, tool_name: str, arguments: dict[str, Any] | Any) -> str | None:

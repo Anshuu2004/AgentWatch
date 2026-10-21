@@ -71,6 +71,20 @@ def test_guard_tool_decorator_no_raise_mode() -> None:
     assert res.get("blocked") is True
 
 
+def test_guard_confidence_decay_collapse() -> None:
+    """PanoptiGuard blocks tool calls when cumulative confidence collapses below critical floor."""
+    g = PanoptiGuard(critical_confidence_floor=0.50)
+
+    # Step 1: 0.80 -> 0.80 >= 0.50 -> allowed
+    d1 = g.check("search", {"q": "query1"}, confidence=0.80)
+    assert d1.allowed is True
+
+    # Step 2: 0.80 * 0.50 = 0.40 < 0.50 -> blocked by collapse warning
+    d2 = g.check("search", {"q": "query2"}, confidence=0.50)
+    assert d2.blocked is True
+    assert "CUMULATIVE_CONFIDENCE_COLLAPSE" in (d2.reason or "")
+
+
 def test_guard_watch_passthrough() -> None:
     """guard.watch attaches universal instrumentation to arbitrary targets."""
     dummy_agent = object()

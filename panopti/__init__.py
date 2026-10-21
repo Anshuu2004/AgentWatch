@@ -1,7 +1,8 @@
 """Panopti: The All-Seeing Pre-Execution Guardrail & Forensic Engine for Autonomous AI.
 
 Panopti is the successor to AgentWatch, providing pre-execution contract verification,
-causal confidence decay tracking, cryptographic witness proofs, and deterministic forensic shadow replay for agent swarms.
+causal confidence decay tracking, cryptographic witness proofs, and deterministic forensic
+shadow replay for agent swarms.
 """
 
 from __future__ import annotations
@@ -9,6 +10,11 @@ from __future__ import annotations
 from agentwatch._version import __version__
 
 try:
+    from agentwatch.causality import (
+        CUMULATIVE_CONFIDENCE_COLLAPSE,
+        ConfidenceCollapseWarning,
+        ConfidenceDecayTracker,
+    )
     from agentwatch.circuit_breaker import (
         AgentLoopError,
         AgentLoopException,
@@ -94,6 +100,9 @@ __all__ = [
     "LoopDetector",
     "AgentLoopError",
     "AgentLoopException",
+    "ConfidenceDecayTracker",
+    "CUMULATIVE_CONFIDENCE_COLLAPSE",
+    "ConfidenceCollapseWarning",
     "PanoptiGuard",
     "GuardDecision",
     "Contract",

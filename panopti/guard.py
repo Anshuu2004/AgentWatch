@@ -8,6 +8,10 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Callable, TypeVar
 
+from agentwatch.causality.decay import (
+    CUMULATIVE_CONFIDENCE_COLLAPSE,
+    ConfidenceDecayTracker,
+)
 from agentwatch.circuit_breaker.loop_detector import AgentLoopError, LoopDetector
 from agentwatch.core.safety import SafetyEngine
 from agentwatch.core.schema import ToolCallData
@@ -41,10 +45,11 @@ class GuardDecision:
 class PanoptiGuard:
     """Active runtime guardrail engine."""
 
-    def __init__(self) -> None:
+    def __init__(self, critical_confidence_floor: float = 0.40) -> None:
         self._safety_engine = SafetyEngine()
         self._loop_detector = LoopDetector(window_size=10, max_repeats=3, max_oscillations=2)
         self._contracts = ContractRegistry()
+        self._confidence_tracker = ConfidenceDecayTracker(critical_floor=critical_confidence_floor)
 
     def register_contract(self, contract: Contract) -> None:
         """Register a temporal or state invariant contract."""
@@ -57,12 +62,28 @@ class PanoptiGuard:
         self._contracts.record_success(tool_name, arguments)
 
     def check(
-        self, tool_name: str, arguments: dict[str, Any] | None = None
+        self,
+        tool_name: str,
+        arguments: dict[str, Any] | None = None,
+        confidence: float | None = None,
     ) -> GuardDecision:
-        """Evaluate a tool invocation against safety policies, contracts, and loops before execution."""
+        """Evaluate a tool invocation against policies, contracts, decay, and loops."""
         args = arguments or {}
 
-        # 1. Loop and oscillation check
+        # 1. Compounding confidence decay check
+        if confidence is not None:
+            step_record = self._confidence_tracker.add_step(confidence)
+            if step_record.warning:
+                return GuardDecision(
+                    allowed=False,
+                    blocked=True,
+                    risk_level="CRITICAL",
+                    risk_score=1.0,
+                    reason=step_record.warning.message,
+                    reasons=[step_record.warning.message],
+                )
+
+        # 2. Loop and oscillation check
         loop_warning = self._loop_detector.record(tool_name, args)
         if loop_warning:
             return GuardDecision(
@@ -145,7 +166,11 @@ class PanoptiGuard:
             if max_frequency:
                 max_invocations, window_steps = max_frequency
                 self.register_contract(
-                    MaxFrequency(tool_name, max_invocations=max_invocations, window_steps=window_steps)
+                    MaxFrequency(
+                        tool_name,
+                        max_invocations=max_invocations,
+                        window_steps=window_steps,
+                    )
                 )
 
             @functools.wraps(fn)

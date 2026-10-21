@@ -55,16 +55,16 @@
       "contributions": 9
     },
     {
+      "login": "shauryasanyal",
+      "avatar_url": "https://github.com/shauryasanyal.png",
+      "html_url": "https://github.com/shauryasanyal",
+      "contributions": 7
+    },
+    {
       "login": "SHUBHAM2775",
       "avatar_url": "https://github.com/SHUBHAM2775.png",
       "html_url": "https://github.com/SHUBHAM2775",
       "contributions": 7
-    },
-    {
-      "login": "shauryasanyal",
-      "avatar_url": "https://github.com/shauryasanyal.png",
-      "html_url": "https://github.com/shauryasanyal",
-      "contributions": 6
     },
     {
       "login": "MayurKharat0390",
@@ -259,6 +259,6 @@
       "contributions": 1
     }
   ],
-  "updated_at": "2026-10-21T17:40:00Z",
+  "updated_at": "2026-10-21T17:45:25Z",
   "total": 43
 }

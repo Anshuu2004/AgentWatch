@@ -61,6 +61,12 @@
       "contributions": 7
     },
     {
+      "login": "shauryasanyal",
+      "avatar_url": "https://github.com/shauryasanyal.png",
+      "html_url": "https://github.com/shauryasanyal",
+      "contributions": 6
+    },
+    {
       "login": "MayurKharat0390",
       "avatar_url": "https://github.com/MayurKharat0390.png",
       "html_url": "https://github.com/MayurKharat0390",
@@ -70,12 +76,6 @@
       "login": "rishabhextra365-lang",
       "avatar_url": "https://github.com/rishabhextra365-lang.png",
       "html_url": "https://github.com/rishabhextra365-lang",
-      "contributions": 5
-    },
-    {
-      "login": "shauryasanyal",
-      "avatar_url": "https://github.com/shauryasanyal.png",
-      "html_url": "https://github.com/shauryasanyal",
       "contributions": 5
     },
     {
@@ -253,6 +253,6 @@
       "contributions": 1
     }
   ],
-  "updated_at": "2026-10-21T17:22:58Z",
+  "updated_at": "2026-10-21T17:34:26Z",
   "total": 42
 }

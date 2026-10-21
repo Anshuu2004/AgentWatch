@@ -2,7 +2,7 @@
 
 <img src="https://img.shields.io/pypi/v/agentwatch-ai?label=Panopti&color=black&style=for-the-badge" alt="Panopti on PyPI" />
 
-# 👁️ PANOPTI
+# 👁️ PANOPTIS
 ### *(formerly AgentWatch)*
 
 <img width="130" height="130" alt="Panopti logo" src="https://github.com/user-attachments/assets/4e6fd818-2458-4ac2-bb9c-25542622dd00" />

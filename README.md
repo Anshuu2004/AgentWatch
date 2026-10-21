@@ -1,31 +1,35 @@
 <div align="center">
 
-<img src="https://img.shields.io/pypi/v/agentwatch-ai?label=AgentWatch&color=black&style=for-the-badge" alt="AgentWatch on PyPI" />
+<img src="https://img.shields.io/pypi/v/agentwatch-ai?label=Panopti&color=black&style=for-the-badge" alt="Panopti on PyPI" />
 
-# AgentWatch
+# 👁️ PANOPTI
+### *(formerly AgentWatch)*
 
-<img width="130" height="130" alt="AgentWatch logo" src="https://github.com/user-attachments/assets/4e6fd818-2458-4ac2-bb9c-25542622dd00" />
+<img width="130" height="130" alt="Panopti logo" src="https://github.com/user-attachments/assets/4e6fd818-2458-4ac2-bb9c-25542622dd00" />
 
-**AI agents are prone to silent failures, hallucinated tool parameters, and unintended side effects.**
-**AgentWatch acts as an active, pre-execution guardrail — auditing reasoning and blocking risky actions before they hit your production stack.**
+**The All-Seeing Pre-Execution Guardrail & Invariant Engine for Autonomous AI.**
+
+*AI agents are prone to silent failures, ungrounded loops, and unintended side effects.*  
+*Panopti acts as an active, pre-execution guardrail — auditing reasoning and blocking risky actions before they hit your production stack.*
 
 <br/>
 
 [![PyPI Version](https://img.shields.io/pypi/v/agentwatch-ai?style=flat-square&color=blue)](https://pypi.org/project/agentwatch-ai/)
-[![Tests](https://img.shields.io/badge/tests-205_passing-brightgreen?style=flat-square)](https://github.com/sreerevanth/AgentWatch)
-[![Coverage](https://img.shields.io/codecov/c/github/sreerevanth/AgentWatch?style=flat-square)](https://codecov.io/gh/sreerevanth/AgentWatch)
+[![Tests](https://img.shields.io/badge/tests-205_passing-brightgreen?style=flat-square)](https://github.com/Shinraya-Tech-Labs/AgentWatch)
+[![Coverage](https://img.shields.io/codecov/c/github/Shinraya-Tech-Labs/AgentWatch?style=flat-square)](https://codecov.io/gh/Shinraya-Tech-Labs/AgentWatch)
 [![License](https://img.shields.io/badge/license-Apache_2.0-blue?style=flat-square)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.12+-blue?style=flat-square&logo=python)](https://python.org)
 [![Discord](https://img.shields.io/badge/Discord-Join_Community-5865F2?style=flat-square&logo=discord)](https://discord.gg/UT9uaeY46e)
-[![Stars](https://img.shields.io/github/stars/sreerevanth/AgentWatch?style=flat-square&color=gold)](https://github.com/sreerevanth/AgentWatch/stargazers)
-[![Forks](https://img.shields.io/github/forks/sreerevanth/AgentWatch?style=flat-square&color=orange)](https://github.com/sreerevanth/AgentWatch/network)
-[![NSoC](https://img.shields.io/badge/NSoC_26'-participating-purple?style=flat-square)](https://github.com/sreerevanth/AgentWatch/issues)
+[![Stars](https://img.shields.io/github/stars/Shinraya-Tech-Labs/AgentWatch?style=flat-square&color=gold)](https://github.com/Shinraya-Tech-Labs/AgentWatch/stargazers)
+[![Forks](https://img.shields.io/github/forks/Shinraya-Tech-Labs/AgentWatch?style=flat-square&color=orange)](https://github.com/Shinraya-Tech-Labs/AgentWatch/network)
+[![NSoC](https://img.shields.io/badge/NSoC_26'-participating-purple?style=flat-square)](https://github.com/Shinraya-Tech-Labs/AgentWatch/issues)
 
 <br/>
 
-```
-pip install agentwatch-ai
-agentwatch session watch "your agent command"
+```bash
+pip install agentwatch-ai   # or panopti-ai
+panopti session watch "your agent command"
+# (fully backward-compatible: agentwatch session watch ...)
 ```
 
 *One command. Every failure caught. Before it runs.*
@@ -439,7 +443,7 @@ flowchart LR
 ### Local Backend Setup
 
 ```bash
-git clone https://github.com/sreerevanth/AgentWatch
+git clone https://github.com/Shinraya-Tech-Labs/AgentWatch
 cd AgentWatch
 docker compose up -d
 pip install -e ".[dev]"
@@ -494,7 +498,7 @@ AgentWatch **v0.2.0** is being built now — 90 features across 10 phases includ
 - Counterfactual replay ("what if step 3 was different")
 - Open reasoning trace schema (the OTEL play)
 
-Every open issue on the roadmap is available to contributors. [Browse them here.](https://github.com/sreerevanth/AgentWatch/issues)
+Every open issue on the roadmap is available to contributors. [Browse them here.](https://github.com/Shinraya-Tech-Labs/AgentWatch/issues)
 
 ---
 
@@ -536,8 +540,8 @@ Contributors discuss issues, get unblocked, and ship together. Get your name on 
 
 <div align="center">
 
-Built by [sreerevanth](https://github.com/sreerevanth)
+Built by [Shinraya Tech Labs](https://github.com/Shinraya-Tech-Labs) & community contributors
 
-⭐ **Star it** · 🐛 [**Open an issue**](https://github.com/sreerevanth/AgentWatch/issues) · 💬 [**Join Discord**](https://discord.gg/UT9uaeY46e)
+⭐ **Star it** · 🐛 [**Open an issue**](https://github.com/Shinraya-Tech-Labs/AgentWatch/issues) · 💬 [**Join Discord**](https://discord.gg/UT9uaeY46e)
 
 </div>

@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "agentwatch-ai"
 version = "0.2.0"
-description = "The Reliability, Safety, and Observability Layer for AI Agents"
+description = "Panopti (formerly AgentWatch): Pre-Execution Guardrail & Observability Layer for AI Agents"
 readme = "README.md"
 license = { text = "Apache-2.0" }
 requires-python = ">=3.12,<3.13"
@@ -99,15 +99,16 @@ all = [
 ]
 
 [project.scripts]
+panopti = "agentwatch.cli.main:main"
 agentwatch = "agentwatch.cli.main:main"
 
 [project.urls]
-Homepage = "https://github.com/sreerevanth/AgentWatch"
-Repository = "https://github.com/sreerevanth/AgentWatch"
-Issues = "https://github.com/sreerevanth/AgentWatch/issues"
+Homepage = "https://github.com/Shinraya-Tech-Labs/AgentWatch"
+Repository = "https://github.com/Shinraya-Tech-Labs/AgentWatch"
+Issues = "https://github.com/Shinraya-Tech-Labs/AgentWatch/issues"
 
 [tool.hatch.build.targets.wheel]
-packages = ["agentwatch"]
+packages = ["agentwatch", "panopti"]
 
 [tool.pytest.ini_options]
 cache_dir = ".pytest_cache"

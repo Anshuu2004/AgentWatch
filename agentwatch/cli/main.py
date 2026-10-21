@@ -36,8 +36,8 @@ if TYPE_CHECKING:
     from agentwatch.eval.runner import EvalReport
 
 app = typer.Typer(
-    name="agentwatch",
-    help="AgentWatch — Reliability, Safety, and Observability Layer for AI Agents",
+    name="panopti",
+    help="Panopti (formerly AgentWatch) — Pre-Execution Guardrail & Observability Layer for AI Agents",
     add_completion=True,
     rich_markup_mode="rich",
 )

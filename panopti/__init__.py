@@ -9,6 +9,14 @@ from __future__ import annotations
 from agentwatch._version import __version__
 
 try:
+    from agentwatch.circuit_breaker import (
+        AgentLoopException,
+        CircuitBreaker,
+        CircuitState,
+        CircuitThresholds,
+        LoopDetector,
+        TripReason,
+    )
     from agentwatch.core.watcher import (
         AgentWatchBlockedError,
         GenericAdapter,
@@ -28,6 +36,12 @@ except ImportError:  # pragma: no cover
     GenericAdapter = None  # type: ignore[assignment]
     AgentWatchBlockedError = Exception  # type: ignore[assignment,misc]
     PanoptiBlockedError = AgentWatchBlockedError
+    CircuitBreaker = None  # type: ignore[assignment]
+    CircuitState = None  # type: ignore[assignment]
+    CircuitThresholds = None  # type: ignore[assignment]
+    TripReason = None  # type: ignore[assignment]
+    LoopDetector = None  # type: ignore[assignment]
+    AgentLoopException = Exception  # type: ignore[assignment,misc]
 
 __all__ = [
     "__version__",
@@ -38,4 +52,10 @@ __all__ = [
     "GenericAdapter",
     "PanoptiBlockedError",
     "AgentWatchBlockedError",
+    "CircuitBreaker",
+    "CircuitState",
+    "CircuitThresholds",
+    "TripReason",
+    "LoopDetector",
+    "AgentLoopException",
 ]

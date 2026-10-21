@@ -43,15 +43,15 @@
       "contributions": 17
     },
     {
-      "login": "Prateeks16",
-      "avatar_url": "https://github.com/Prateeks16.png",
-      "html_url": "https://github.com/Prateeks16",
-      "contributions": 11
-    },
-    {
       "login": "shauryasanyal",
       "avatar_url": "https://github.com/shauryasanyal.png",
       "html_url": "https://github.com/shauryasanyal",
+      "contributions": 13
+    },
+    {
+      "login": "Prateeks16",
+      "avatar_url": "https://github.com/Prateeks16.png",
+      "html_url": "https://github.com/Prateeks16",
       "contributions": 11
     },
     {
@@ -259,6 +259,6 @@
       "contributions": 1
     }
   ],
-  "updated_at": "2026-10-21T18:00:59Z",
+  "updated_at": "2026-10-21T18:17:17Z",
   "total": 43
 }

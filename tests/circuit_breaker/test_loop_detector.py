@@ -1,4 +1,4 @@
-"""Unit tests for the Sliding Window Tool-Call Loop & Parameter Oscillation Detector (Issue #746)."""
+"""Unit tests for the Sliding Window Tool-Call Loop & Oscillation Detector (Issue #746)."""
 
 from __future__ import annotations
 
@@ -77,7 +77,10 @@ def test_circuit_breaker_trips_on_repetitive_tool_loop() -> None:
             event_type=EventType.TOOL_CALL,
             status=ExecutionStatus.RUNNING,
             step_number=i + 1,
-            tool_call=ToolCallData(tool_name="bash_exec", arguments={"cmd": "grep -r pattern"}),
+            tool_call=ToolCallData(
+                tool_name="bash_exec",
+                arguments={"cmd": "grep -r pattern"},
+            ),
         )
         assert cb.observe(ev) is CircuitState.CLOSED
 
@@ -88,7 +91,10 @@ def test_circuit_breaker_trips_on_repetitive_tool_loop() -> None:
         event_type=EventType.TOOL_CALL,
         status=ExecutionStatus.RUNNING,
         step_number=3,
-        tool_call=ToolCallData(tool_name="bash_exec", arguments={"cmd": "grep -r pattern"}),
+        tool_call=ToolCallData(
+            tool_name="bash_exec",
+            arguments={"cmd": "grep -r pattern"},
+        ),
     )
     assert cb.observe(trip_ev) is CircuitState.OPEN
     assert cb.is_tripped is True

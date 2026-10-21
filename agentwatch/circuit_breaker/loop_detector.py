@@ -57,7 +57,9 @@ class LoopDetector:
         self._history: deque[ToolCallFingerprint] = deque(maxlen=window_size)
 
     @staticmethod
-    def canonical_fingerprint(tool_name: str, arguments: dict[str, Any] | Any) -> ToolCallFingerprint:
+    def canonical_fingerprint(
+        tool_name: str, arguments: dict[str, Any] | Any
+    ) -> ToolCallFingerprint:
         """Produce a canonical SHA-256 fingerprint for a tool name and argument dictionary."""
         try:
             canonical_json = json.dumps(arguments, sort_keys=True, default=str)
@@ -66,7 +68,11 @@ class LoopDetector:
 
         args_hash = hashlib.sha256(canonical_json.encode()).hexdigest()[:16]
         raw_hash = hashlib.sha256(f"{tool_name}:{canonical_json}".encode()).hexdigest()[:16]
-        return ToolCallFingerprint(tool_name=tool_name, args_hash=args_hash, raw_hash=raw_hash)
+        return ToolCallFingerprint(
+            tool_name=tool_name,
+            args_hash=args_hash,
+            raw_hash=raw_hash,
+        )
 
     def record(self, tool_name: str, arguments: dict[str, Any] | Any) -> str | None:
         """Record a tool invocation and evaluate for loops.

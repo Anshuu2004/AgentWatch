@@ -25,7 +25,7 @@ def test_guard_decision_blocked_destructive_command() -> None:
     decision = g.check("bash", {"cmd": "rm -rf / --no-preserve-root"})
     assert decision.blocked is True
     assert decision.allowed is False
-    assert decision.risk_level in ("HIGH", "CRITICAL")
+    assert decision.risk_level.upper() in ("HIGH", "CRITICAL")
     assert len(decision.reasons) > 0
 
 

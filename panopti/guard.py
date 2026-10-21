@@ -64,6 +64,12 @@ class PanoptiGuard:
         )
         safety_result = self._safety_engine.evaluate(tool_data)
 
+        risk_val = (
+            safety_result.risk_level.value
+            if hasattr(safety_result.risk_level, "value")
+            else str(safety_result.risk_level)
+        ).upper()
+
         if safety_result.blocked:
             reason = (
                 safety_result.reasons[0]
@@ -73,7 +79,7 @@ class PanoptiGuard:
             return GuardDecision(
                 allowed=False,
                 blocked=True,
-                risk_level=safety_result.risk_level.value,
+                risk_level=risk_val,
                 risk_score=safety_result.risk_score,
                 reason=reason,
                 reasons=safety_result.reasons,
@@ -82,7 +88,7 @@ class PanoptiGuard:
         return GuardDecision(
             allowed=True,
             blocked=False,
-            risk_level=safety_result.risk_level.value,
+            risk_level=risk_val,
             risk_score=safety_result.risk_score,
             reason=None,
             reasons=[],

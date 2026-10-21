@@ -73,15 +73,15 @@
       "contributions": 5
     },
     {
-      "login": "rohitkumarnaidu",
-      "avatar_url": "https://github.com/rohitkumarnaidu.png",
-      "html_url": "https://github.com/rohitkumarnaidu",
-      "contributions": 4
-    },
-    {
       "login": "shauryasanyal",
       "avatar_url": "https://github.com/shauryasanyal.png",
       "html_url": "https://github.com/shauryasanyal",
+      "contributions": 5
+    },
+    {
+      "login": "rohitkumarnaidu",
+      "avatar_url": "https://github.com/rohitkumarnaidu.png",
+      "html_url": "https://github.com/rohitkumarnaidu",
       "contributions": 4
     },
     {
@@ -253,6 +253,6 @@
       "contributions": 1
     }
   ],
-  "updated_at": "2026-10-20T09:55:33Z",
+  "updated_at": "2026-10-21T17:22:58Z",
   "total": 42
 }

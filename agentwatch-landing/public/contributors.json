@@ -22,7 +22,13 @@
       "login": "SHAURYASANYAL3",
       "avatar_url": "https://github.com/SHAURYASANYAL3.png",
       "html_url": "https://github.com/SHAURYASANYAL3",
-      "contributions": 23
+      "contributions": 24
+    },
+    {
+      "login": "shauryasanyal",
+      "avatar_url": "https://github.com/shauryasanyal.png",
+      "html_url": "https://github.com/shauryasanyal",
+      "contributions": 18
     },
     {
       "login": "anshul23102",
@@ -34,12 +40,6 @@
       "login": "arcgod-design",
       "avatar_url": "https://github.com/arcgod-design.png",
       "html_url": "https://github.com/arcgod-design",
-      "contributions": 17
-    },
-    {
-      "login": "shauryasanyal",
-      "avatar_url": "https://github.com/shauryasanyal.png",
-      "html_url": "https://github.com/shauryasanyal",
       "contributions": 17
     },
     {
@@ -85,15 +85,15 @@
       "contributions": 4
     },
     {
-      "login": "Subodh-17",
-      "avatar_url": "https://github.com/Subodh-17.png",
-      "html_url": "https://github.com/Subodh-17",
-      "contributions": 3
-    },
-    {
       "login": "hinokamiyori",
       "avatar_url": "https://github.com/hinokamiyori.png",
       "html_url": "https://github.com/hinokamiyori",
+      "contributions": 4
+    },
+    {
+      "login": "Subodh-17",
+      "avatar_url": "https://github.com/Subodh-17.png",
+      "html_url": "https://github.com/Subodh-17",
       "contributions": 3
     },
     {
@@ -259,6 +259,6 @@
       "contributions": 1
     }
   ],
-  "updated_at": "2026-10-22T00:15:06Z",
+  "updated_at": "2026-10-22T00:33:59Z",
   "total": 43
 }

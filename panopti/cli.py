@@ -24,11 +24,12 @@ def main(args: list[str] | None = None) -> Any:
             print("  demo            Run interactive terminal hypervisor simulation (DROP TABLE intercept)")
             print("  playground      Launch zero-dependency local web interactive playground")
             print("  doctor          Run system, interceptor, and circuit breaker health checks")
-            print("  top / live      Interactive terminal sentinel monitor")
+            print("  top / live      Interactive terminal sentinel monitor [--profile <name>]")
             print("  court verify    Verify a cryptographic execution witness proof (.json)")
             print("  attest verify   Verify an immutable cryptographic policy attestation seal")
             print("  replay          Run deterministic shadow replay of an execution tape (.json)")
             print("  synth           Synthesize invariant contracts from trace (.json)\n")
+            print("Available Profiles: fintech, devops, healthcare, support\n")
             print("For all core AgentWatch commands, pass standard subcommands.\n")
 
     if argv and argv[0] == "demo":
@@ -55,12 +56,22 @@ def main(args: list[str] | None = None) -> Any:
         return 0
 
     if argv and argv[0] in ("top", "live"):
+        from panopti.presets.profiles import get_profile
+        profile_name = "devops"
+        if "--profile" in argv:
+            idx = argv.index("--profile")
+            if idx + 1 < len(argv):
+                profile_name = argv[idx + 1]
+        prof = get_profile(profile_name)
+
         print(PANOPTI_ASCII_BANNER)
-        print("👁️  PANOPTI SENTINEL [LIVE MONITOR]")
+        print(f"👁️  PANOPTI SENTINEL [LIVE MONITOR - PROFILE: {prof.name.upper()}]")
         print("--------------------------------------------------")
+        print(f"Description:        {prof.description}")
         print("Active Interceptor: ONLINE (0.00ms latency)")
         print("Circuit Breaker:    CLOSED (nominal)")
-        print("Compounding Decay:  NORMAL (floor=0.40)")
+        print(f"Confidence Floor:   {prof.confidence_floor:.2f}")
+        print(f"Target Patterns:    {len(prof.destructive_patterns)} compiled regex rules")
         print("Forensic Witness:   RECORDING (Merkle sealed)")
         print("--------------------------------------------------")
         print("Listening on telemetry socket... (Press Ctrl+C to exit)")

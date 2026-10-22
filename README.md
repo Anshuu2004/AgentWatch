@@ -28,15 +28,21 @@
 
 ```bash
 pip install agentwatch-ai   # or panopti-ai
-panopti session watch "your agent command"
-# (fully backward-compatible: agentwatch session watch ...)
+
+# 🎮 Instant Interactive Terminal Demo (Simulates rogue agent attempting DROP TABLE users;)
+panopti demo
+
+# 🌐 Launch Zero-Dependency Local Web Playground
+panopti playground
 ```
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FShinraya-Tech-Labs%2FAgentWatch&root-directory=agentwatch-landing)
 
 *One command. Every failure caught. Before it runs.*
 
 <br/>
 
-[**Quick Start**](#-quick-start) · [**How It Works**](#-how-it-works) · [**Architecture**](#-architecture) · [**Frameworks**](#-supported-frameworks) · [**Discord**](https://discord.gg/UT9uaeY46e) · [**Contribute**](#-contributing)
+[**Interactive Demo**](#-instant-interactive-demo) · [**Quick Start**](#-quick-start) · [**How It Works**](#-how-it-works) · [**Architecture**](#-architecture) · [**Discord**](https://discord.gg/UT9uaeY46e) · [**Contribute**](#-contributing)
 
 </div>
 

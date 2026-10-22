@@ -7,9 +7,10 @@ import gsap from "gsap";
 const LINKS = [
   { label: "Features",     href: "#features",     section: "features" },
   { label: "How it works", href: "#how-it-works", section: "how-it-works" },
+  { label: "Playground",   href: "/playground",   page: true },
   { label: "About",        href: "/about",        page: true },
   { label: "Contributors", href: "/contributors", page: true },
-  { label: "GitHub",       href: "https://github.com/sreerevanth/agentwatch", external: true },
+  { label: "GitHub",       href: "https://github.com/Shinraya-Tech-Labs/AgentWatch", external: true },
   { label: "Discord",      href: "https://discord.gg/UT9uaeY46e", external: true },
 ];
 

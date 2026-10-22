@@ -21,6 +21,8 @@ def main(args: list[str] | None = None) -> Any:
             print(PANOPTI_ASCII_BANNER)
             print("Usage: panopti [COMMAND] [ARGS]...\n")
             print("Panopti Commands:")
+            print("  demo            Run interactive terminal hypervisor simulation (DROP TABLE intercept)")
+            print("  playground      Launch zero-dependency local web interactive playground")
             print("  doctor          Run system, interceptor, and circuit breaker health checks")
             print("  top / live      Interactive terminal sentinel monitor")
             print("  court verify    Verify a cryptographic execution witness proof (.json)")
@@ -28,6 +30,22 @@ def main(args: list[str] | None = None) -> Any:
             print("  replay          Run deterministic shadow replay of an execution tape (.json)")
             print("  synth           Synthesize invariant contracts from trace (.json)\n")
             print("For all core AgentWatch commands, pass standard subcommands.\n")
+
+    if argv and argv[0] == "demo":
+        from panopti.demo import run_interactive_demo
+        fast = "--fast" in argv
+        no_color = "--no-color" in argv
+        return run_interactive_demo(fast=fast, no_color=no_color)
+
+    if argv and argv[0] == "playground":
+        from panopti.playground import launch_local_playground
+        port = 8080
+        if len(argv) >= 3 and argv[1] in ("-p", "--port"):
+            try:
+                port = int(argv[2])
+            except ValueError:
+                pass
+        return launch_local_playground(port=port)
 
     if argv and argv[0] == "doctor":
         from panopti.doctor import format_doctor_report, run_diagnostics

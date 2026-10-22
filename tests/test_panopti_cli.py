@@ -7,8 +7,10 @@ from pathlib import Path
 
 import pytest
 
+from panopti.attest import AttestationEngine
 from panopti.cli import main
 from panopti.court import WitnessChain
+from panopti.replay import ReplayTape
 
 
 def test_cli_doctor_command(capsys: pytest.CaptureFixture[str]) -> None:
@@ -41,3 +43,50 @@ def test_cli_court_verify_valid(tmp_path: Path, capsys: pytest.CaptureFixture[st
     assert ret == 0
     captured = capsys.readouterr().out
     assert "VERIFIED: Witness proof" in captured
+
+
+def test_cli_attest_verify(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """panopti attest verify confirms signed attestation seal."""
+    seal = AttestationEngine.create_seal(
+        merkle_root="abc123merkle",
+        tool_count=3,
+        confidence_floor=0.95,
+        secret_key="my-key",
+    )
+    seal_file = tmp_path / "seal.json"
+    seal_file.write_text(seal.to_json(), encoding="utf-8")
+
+    ret = main(["attest", "verify", str(seal_file), "--key", "my-key"])
+    assert ret == 0
+    captured = capsys.readouterr().out
+    assert "VERIFIED ATTESTATION SEAL" in captured
+
+
+def test_cli_replay(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """panopti replay replays recorded tape deterministically."""
+    tape = ReplayTape()
+    tape.record("step_a", {"x": 1}, "ok")
+    tape_file = tmp_path / "tape.json"
+    tape_file.write_text(tape.to_json(), encoding="utf-8")
+
+    ret = main(["replay", str(tape_file)])
+    assert ret == 0
+    captured = capsys.readouterr().out
+    assert "REPLAY CONGRUENT" in captured
+
+
+def test_cli_synth(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """panopti synth analyzes trace and outputs synthesized invariants."""
+    events = [
+        {"tool_name": "fetch"},
+        {"tool_name": "fetch"},
+        {"tool_name": "fetch"},
+    ]
+    trace_file = tmp_path / "trace.json"
+    trace_file.write_text(json.dumps(events), encoding="utf-8")
+
+    ret = main(["synth", str(trace_file)])
+    assert ret == 0
+    captured = capsys.readouterr().out
+    assert "SYNTHESIS COMPLETED" in captured
+    assert "REPETITIVE_HAMMERING" in captured

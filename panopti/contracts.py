@@ -8,7 +8,19 @@ from collections import deque
 from dataclasses import dataclass, field
 from typing import Any
 
-from agentwatch.core.watcher import AgentWatchBlockedError
+try:
+    from agentwatch.core.watcher import AgentWatchBlockedError
+except (ImportError, ModuleNotFoundError):
+    class AgentWatchBlockedError(Exception):  # type: ignore[no-redef]
+        def __init__(
+            self,
+            message: str,
+            tool_name: str = "",
+            reasons: list[str] | None = None,
+        ) -> None:
+            super().__init__(message)
+            self.tool_name = tool_name
+            self.reasons = reasons or [message]
 
 logger = logging.getLogger("panopti.contracts")
 

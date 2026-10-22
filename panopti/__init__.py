@@ -7,7 +7,44 @@ shadow replay for agent swarms.
 
 from __future__ import annotations
 
-from agentwatch._version import __version__
+try:
+    from agentwatch._version import __version__
+except (ImportError, ModuleNotFoundError):
+    __version__ = "0.2.0"
+
+from panopti.attest import (
+    AttestationEngine,
+    PanoptiAttestationSeal,
+)
+from panopti.contracts import (
+    Contract,
+    ContractRegistry,
+    ContractViolationError,
+    Disallows,
+    MaxFrequency,
+    RequiresPrior,
+)
+from panopti.court import (
+    WitnessChain,
+    WitnessEntry,
+)
+from panopti.mesh import (
+    SwarmAgentNode,
+    SwarmMesh,
+)
+from panopti.replay import (
+    DropStepPerturbation,
+    MutateResultPerturbation,
+    Perturbation,
+    RecordedCall,
+    ReplayReport,
+    ReplayTape,
+    ShadowReplayer,
+)
+from panopti.synth import (
+    PolicySynthesizer,
+    SynthesizedInvariant,
+)
 
 try:
     from agentwatch.causality import (
@@ -31,27 +68,11 @@ try:
         detect_framework_label,
         watch,
     )
-    from panopti.contracts import (
-        Contract,
-        ContractRegistry,
-        ContractViolationError,
-        Disallows,
-        MaxFrequency,
-        RequiresPrior,
-    )
-    from panopti.court import (
-        WitnessChain,
-        WitnessEntry,
-    )
     from panopti.doctor import run_diagnostics
     from panopti.guard import (
         GuardDecision,
         PanoptiGuard,
         guard,
-    )
-    from panopti.mesh import (
-        SwarmAgentNode,
-        SwarmMesh,
     )
 
     PanoptiBlockedError = AgentWatchBlockedError
@@ -72,16 +93,9 @@ except ImportError:  # pragma: no cover
     AgentLoopException = AgentLoopError
     PanoptiGuard = None  # type: ignore[assignment]
     GuardDecision = None  # type: ignore[assignment]
-    Contract = None  # type: ignore[assignment]
-    ContractRegistry = None  # type: ignore[assignment]
-    RequiresPrior = None  # type: ignore[assignment]
-    Disallows = None  # type: ignore[assignment]
-    MaxFrequency = None  # type: ignore[assignment]
-    ContractViolationError = Exception  # type: ignore[assignment,misc]
-    WitnessEntry = None  # type: ignore[assignment]
-    WitnessChain = None  # type: ignore[assignment]
-    SwarmAgentNode = None  # type: ignore[assignment]
-    SwarmMesh = None  # type: ignore[assignment]
+    ConfidenceDecayTracker = None  # type: ignore[assignment]
+    CUMULATIVE_CONFIDENCE_COLLAPSE = "CUMULATIVE_CONFIDENCE_COLLAPSE"
+    ConfidenceCollapseWarning = None  # type: ignore[assignment]
     run_diagnostics = None  # type: ignore[assignment]
 
 __all__ = [
@@ -116,4 +130,15 @@ __all__ = [
     "SwarmAgentNode",
     "SwarmMesh",
     "run_diagnostics",
+    "RecordedCall",
+    "ReplayTape",
+    "ShadowReplayer",
+    "ReplayReport",
+    "Perturbation",
+    "DropStepPerturbation",
+    "MutateResultPerturbation",
+    "PanoptiAttestationSeal",
+    "AttestationEngine",
+    "PolicySynthesizer",
+    "SynthesizedInvariant",
 ]

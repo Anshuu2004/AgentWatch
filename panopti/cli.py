@@ -23,8 +23,11 @@ def main(args: list[str] | None = None) -> Any:
             print("Panopti Commands:")
             print("  doctor          Run system, interceptor, and circuit breaker health checks")
             print("  top / live      Interactive terminal sentinel monitor")
-            print("  court verify    Verify a cryptographic execution witness proof (.json)\n")
-            print("For all core AgentWatch commands, pass any standard subcommand (e.g. 'start', 'replay', 'eval').\n")
+            print("  court verify    Verify a cryptographic execution witness proof (.json)")
+            print("  attest verify   Verify an immutable cryptographic policy attestation seal")
+            print("  replay          Run deterministic shadow replay of an execution tape (.json)")
+            print("  synth           Synthesize invariant contracts from trace (.json)\n")
+            print("For all core AgentWatch commands, pass standard subcommands.\n")
 
     if argv and argv[0] == "doctor":
         from panopti.doctor import format_doctor_report, run_diagnostics
@@ -65,6 +68,77 @@ def main(args: list[str] | None = None) -> Any:
                 print(f"Error reading proof file: {e}", file=sys.stderr)
                 return 1
         print("Usage: panopti court verify <proof_file.json>")
+        return 1
+
+    if argv and argv[0] == "attest":
+        if len(argv) >= 3 and argv[1] == "verify":
+            filepath = argv[2]
+            key = (
+                argv[4]
+                if len(argv) >= 5 and argv[3] in ("-k", "--key")
+                else "panopti-seal-default-key"
+            )
+            try:
+                from panopti.attest import AttestationEngine, PanoptiAttestationSeal
+                with open(filepath, encoding="utf-8") as f:
+                    seal = PanoptiAttestationSeal.from_json(f.read())
+                if AttestationEngine.verify_seal(seal, secret_key=key):
+                    print(f"✅ VERIFIED ATTESTATION SEAL: '{seal.seal_id}'")
+                    print(f"   Policy Verdict:   {seal.policy_verdict}")
+                    print(f"   Confidence Floor: {seal.confidence_floor:.4f}")
+                    print(f"   Loop Status:      {seal.loop_status}")
+                    print(f"   Merkle Root:      {seal.merkle_root}")
+                    return 0
+                else:
+                    print("❌ INVALID SEAL: Signature mismatch or corrupted certificate.")
+                    return 1
+            except Exception as e:
+                print(f"Error reading attestation seal: {e}", file=sys.stderr)
+                return 1
+        print("Usage: panopti attest verify <seal_file.json> [--key <secret_key>]")
+        return 1
+
+    if argv and argv[0] == "replay":
+        if len(argv) >= 2:
+            filepath = argv[1]
+            try:
+                from panopti.replay import ReplayTape, ShadowReplayer
+                with open(filepath, encoding="utf-8") as f:
+                    tape = ReplayTape.from_json(f.read())
+                replayer = ShadowReplayer(tape)
+                for call in tape.calls:
+                    res, err = replayer.step(call.tool_name, call.arguments)
+                    if err:
+                        print(f"❌ DIVERGENCE DETECTED at step {call.step_index}: {err}")
+                        return 1
+                print(f"✅ REPLAY CONGRUENT: {len(tape)} recorded steps matched deterministically.")
+                return 0
+            except Exception as e:
+                print(f"Error during shadow replay: {e}", file=sys.stderr)
+                return 1
+        print("Usage: panopti replay <tape_file.json>")
+        return 1
+
+    if argv and argv[0] == "synth":
+        if len(argv) >= 2:
+            filepath = argv[1]
+            try:
+                from panopti.synth import PolicySynthesizer
+                with open(filepath, encoding="utf-8") as f:
+                    events = json.load(f)
+                if isinstance(events, dict) and "events" in events:
+                    events = events["events"]
+                synthesized = PolicySynthesizer.analyze_trace(events)
+                print(f"🔍 SYNTHESIS COMPLETED: {len(synthesized)} recommendation(s)\n")
+                for s in synthesized:
+                    print(f"• [{s.trigger_pattern}] (conf={s.confidence:.2f}): {s.target_tool}")
+                    print(f"  Contract:    {s.contract.name}")
+                    print(f"  Explanation: {s.explanation}\n")
+                return 0
+            except Exception as e:
+                print(f"Error analyzing trace for policy synthesis: {e}", file=sys.stderr)
+                return 1
+        print("Usage: panopti synth <trace_file.json>")
         return 1
 
     # Delegate all standard commands to agentwatch.cli.main

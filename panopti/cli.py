@@ -10,6 +10,23 @@ from typing import Any
 from panopti._banner import PANOPTI_ASCII_BANNER
 
 
+def _int_flag(argv: list[str], flag: str, *, default: int, minimum: int) -> int:
+    """Read ``flag <int>`` from argv, raising ValueError with a readable message."""
+    if flag not in argv:
+        return default
+    idx = argv.index(flag)
+    if idx + 1 >= len(argv):
+        raise ValueError(f"{flag} needs a value")
+    raw = argv[idx + 1]
+    try:
+        value = int(raw)
+    except ValueError:
+        raise ValueError(f"{flag} must be a whole number, got '{raw}'") from None
+    if value < minimum:
+        raise ValueError(f"{flag} must be at least {minimum}, got {value}")
+    return value
+
+
 def main(args: list[str] | None = None) -> Any:
     """CLI entrypoint dispatching Panopti-specific commands and delegating to AgentWatch."""
     argv = list(sys.argv[1:] if args is None else args)
@@ -24,7 +41,10 @@ def main(args: list[str] | None = None) -> Any:
             print("  demo            Run interactive terminal hypervisor simulation (DROP TABLE intercept)")
             print("  playground      Launch zero-dependency local web interactive playground")
             print("  doctor          Run system, interceptor, and circuit breaker health checks")
-            print("  top / live      Interactive terminal sentinel monitor [--profile <name>]")
+            print(
+                "  top / live      Interactive terminal sentinel monitor [--profile <name>]"
+                " [--cooldown <s>] [--max-failures <n>]"
+            )
             print("  court verify    Verify a cryptographic execution witness proof (.json)")
             print("  attest verify   Verify an immutable cryptographic policy attestation seal")
             print("  replay          Run deterministic shadow replay of an execution tape (.json)")
@@ -56,6 +76,7 @@ def main(args: list[str] | None = None) -> Any:
         return 0
 
     if argv and argv[0] in ("top", "live"):
+        from agentwatch.circuit_breaker import CircuitBreaker, CircuitThresholds
         from panopti.presets.profiles import get_profile
         profile_name = "devops"
         if "--profile" in argv:
@@ -64,12 +85,27 @@ def main(args: list[str] | None = None) -> Any:
                 profile_name = argv[idx + 1]
         prof = get_profile(profile_name)
 
+        try:
+            cooldown = _int_flag(argv, "--cooldown", default=60, minimum=0)
+            max_failures = _int_flag(argv, "--max-failures", default=3, minimum=1)
+        except ValueError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 2
+        breaker = CircuitBreaker(
+            f"panopti-{argv[0]}",
+            CircuitThresholds(
+                max_consecutive_errors=max_failures, cooldown_seconds=float(cooldown)
+            ),
+        )
+
         print(PANOPTI_ASCII_BANNER)
         print(f"👁️  PANOPTI SENTINEL [LIVE MONITOR - PROFILE: {prof.name.upper()}]")
         print("--------------------------------------------------")
         print(f"Description:        {prof.description}")
         print("Active Interceptor: ONLINE (0.00ms latency)")
-        print("Circuit Breaker:    CLOSED (nominal)")
+        print(f"Circuit Breaker:    {breaker.state.value.upper()} (nominal)")
+        print(f"Breaker Cooldown:   {cooldown}s")
+        print(f"Max Failures:       {max_failures} consecutive")
         print(f"Confidence Floor:   {prof.confidence_floor:.2f}")
         print(f"Target Patterns:    {len(prof.destructive_patterns)} compiled regex rules")
         print("Forensic Witness:   RECORDING (Merkle sealed)")

@@ -345,6 +345,8 @@ command: agentwatch server top
     short_help: 
     param api_key kind=TyperOption type=str required=False default=None flags=--api-key help='API key for protected endpoints (or set AGENTWATCH_API_KEY).'
     param api_url kind=TyperOption type=str required=False default='http://localhost:8000' flags=--api help=''
+    param cooldown kind=TyperOption type=int range required=False default=60 flags=--cooldown help='Seconds the circuit breaker stays OPEN before probing recovery (0 = manual resume only)'
+    param max_failures kind=TyperOption type=int range required=False default=3 flags=--max-failures help='Consecutive failures that trip the circuit breaker'
     param refresh_rate kind=TyperOption type=float range required=False default=1.0 flags=--refresh help='Refresh rate in seconds'
 
 command: agentwatch session

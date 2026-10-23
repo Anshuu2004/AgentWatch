@@ -27,6 +27,9 @@ class CircuitThresholds:
             ``0.0`` to disable per-event confidence checking.
         half_open_probe_successes: Number of consecutive successful probe events
             required in HALF_OPEN before the breaker closes again.
+        cooldown_seconds: How long the breaker stays OPEN before it moves to
+            HALF_OPEN on its own and starts probing recovery. ``0`` disables the
+            automatic move, so recovery only starts through ``resume()``.
     """
 
     max_total_tokens: int = 100_000
@@ -38,6 +41,7 @@ class CircuitThresholds:
     max_tool_repeats: int = 3
     max_parameter_oscillations: int = 2
     loop_window_size: int = 10
+    cooldown_seconds: float = 0.0
 
     def __post_init__(self) -> None:
         # Fail loudly on nonsensical configuration rather than silently

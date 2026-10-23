@@ -14,6 +14,7 @@ Allowed transitions::
     OPEN      -> PAUSED      (pause(): checkpoint saved)
     PAUSED    -> HALF_OPEN   (resume(): begin probing)
     OPEN      -> HALF_OPEN   (resume() without an intervening pause)
+    OPEN      -> HALF_OPEN   (cooldown_seconds elapsed, when cooldown is enabled)
     HALF_OPEN -> CLOSED      (enough consecutive successful probes)
     HALF_OPEN -> OPEN        (a probe failed)
     any       -> CLOSED      (manual reset)
@@ -29,7 +30,9 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import time
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
@@ -104,14 +107,19 @@ class CircuitBreaker:
         *,
         rollback_engine: Any | None = None,
         eu_ai_act_package: Any | None = None,
+        clock: Callable[[], float] = time.monotonic,
     ) -> None:
         self.session_id = session_id
         self.thresholds = thresholds or CircuitThresholds()
         self._rollback_engine = rollback_engine
         self._eu_ai_act = eu_ai_act_package
+        # Injectable so tests can move time forward without sleeping.
+        self._clock = clock
 
         self._state = CircuitState.CLOSED
         self._history: list[TransitionRecord] = []
+        # Monotonic time of the last move into OPEN, used for the cooldown.
+        self._opened_at: float | None = None
 
         # Window counters, reset whenever the breaker (re)enters CLOSED.
         self._total_tokens = 0
@@ -166,7 +174,19 @@ class CircuitBreaker:
             "probe_successes": self._probe_successes,
             "last_checkpoint_id": self._last_checkpoint_id,
             "transitions": len(self._history),
+            "cooldown_seconds": self.thresholds.cooldown_seconds,
+            "cooldown_remaining": self.cooldown_remaining(),
         }
+
+    def cooldown_remaining(self) -> float | None:
+        """Seconds left before an OPEN breaker starts probing on its own.
+
+        ``None`` when the breaker is not OPEN or the cooldown is disabled.
+        """
+        cooldown = self.thresholds.cooldown_seconds
+        if self._state is not CircuitState.OPEN or not cooldown or self._opened_at is None:
+            return None
+        return max(0.0, cooldown - (self._clock() - self._opened_at))
 
     # ------------------------------------------------------------- observe
 
@@ -177,7 +197,10 @@ class CircuitBreaker:
         OPEN. In HALF_OPEN state, the event is treated as a recovery probe. In
         OPEN/PAUSED state, events are recorded in the counters but do not change
         state (the agent is expected to have stopped; callers drive recovery via
-        :meth:`pause` / :meth:`resume`).
+        :meth:`pause` / :meth:`resume`). The one exception is an OPEN breaker
+        whose ``cooldown_seconds`` has elapsed: it moves to HALF_OPEN first and
+        the event is evaluated as the first recovery probe. PAUSED is never left
+        automatically, since a pause is an explicit operator decision.
         """
         if event.session_id != self.session_id:
             # Ignore events for other sessions rather than corrupting counters.
@@ -186,6 +209,10 @@ class CircuitBreaker:
         self._events_observed += 1
         self._last_step_number = event.step_number
         self._accumulate(event)
+
+        if self.cooldown_remaining() == 0.0:
+            self._probe_successes = 0
+            self._transition(CircuitState.HALF_OPEN, "cooldown_elapsed")
 
         if self._state is CircuitState.CLOSED:
             reason = self._evaluate_thresholds()
@@ -372,6 +399,7 @@ class CircuitBreaker:
         }
 
         self._state = to_state
+        self._opened_at = self._clock() if to_state is CircuitState.OPEN else None
         if to_state is CircuitState.CLOSED:
             self._reset_window()
 

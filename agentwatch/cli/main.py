@@ -1363,8 +1363,26 @@ def top(
     api_url: str = typer.Option("http://localhost:8000", "--api"),
     refresh_rate: float = typer.Option(1.0, "--refresh", min=0.1, help="Refresh rate in seconds"),
     api_key: str | None = API_KEY_OPTION,
+    cooldown: int = typer.Option(
+        60,
+        "--cooldown",
+        min=0,
+        help="Seconds the circuit breaker stays OPEN before probing recovery (0 = manual resume only)",
+    ),
+    max_failures: int = typer.Option(
+        3, "--max-failures", min=1, help="Consecutive failures that trip the circuit breaker"
+    ),
 ) -> None:
     """[bold]Live Process Monitor[/bold] showing executing agent loops, active tools, and token burn rate."""
+    from agentwatch.circuit_breaker import CircuitThresholds
+
+    thresholds = CircuitThresholds(
+        max_consecutive_errors=max_failures, cooldown_seconds=float(cooldown)
+    )
+    breaker_info = (
+        f"breaker: cooldown {thresholds.cooldown_seconds:g}s, "
+        f"max failures {thresholds.max_consecutive_errors}"
+    )
 
     async def _run() -> None:
         try:
@@ -1410,6 +1428,7 @@ def top(
                 return Panel(
                     "No active agent sessions running.",
                     title="[cyan]AgentWatch Top[/cyan]",
+                    subtitle=breaker_info,
                     border_style="cyan",
                 )
 
@@ -1425,6 +1444,7 @@ def top(
             return Panel(
                 table,
                 title="[cyan]AgentWatch Top - Active Agent Loops[/cyan]",
+                subtitle=breaker_info,
                 border_style="cyan",
             )
 

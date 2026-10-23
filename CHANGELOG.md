@@ -11,6 +11,7 @@ file and uses it as the GitHub Release body, so keep each version's notes here.
 ## [Unreleased]
 
 ### Added
+- `agentwatch session export` now also writes `--format jsonl` (one event per line) and `--format csv` (fixed columns `event_type, timestamp, tool_name, confidence, status, session_id` plus a `metadata_json` column), backed by the stdlib-only `agentwatch.telemetry.exporter` (`export_to_jsonl`, `export_to_csv`). Text that starts with `=`, `+`, `-` or `@` is prefixed with `'` in CSV so spreadsheets do not run it as a formula (issue #769).
 - Enterprise Telemetry (OBS-008): OTLP export of agent reasoning traces mapping to OpenTelemetry span hierarchy, ensuring compatibility with Grafana, Jaeger, and Datadog via `BatchSpanProcessor`.
 - Scheduled red-team automation (issue #399): externalized the attack corpus to `agentwatch/security/payloads.json` (loadable via `load_corpus()`), plus a Celery task `agentwatch.tasks.run_redteam` that runs the red-team harness on a schedule and returns a JSON vulnerability report (bypassed = guardrails that failed).
 - PII/PHI redaction for telemetry (issue #398, CMP-003/004): `agentwatch.security.redaction` masks SSNs, emails, medical diagnoses, and similar sensitive data as `[REDACTED]` (Presidio when installed via the `redaction` extra, else the GDPR/HIPAA regex detectors). Opt-in on the watcher (`GenericAdapter(redact=True)`) scrubs tool-call payloads before they are published/persisted, plus a `GET /api/v1/governance/eu-ai-act-report` Article 15 conformity export.

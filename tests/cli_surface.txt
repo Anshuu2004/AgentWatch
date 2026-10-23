@@ -354,11 +354,11 @@ command: agentwatch session
     short_help: 
 
 command: agentwatch session export
-    help: [bold]Export[/bold] a session replay to a portable JSON or Markdown file.
+    help: [bold]Export[/bold] a session replay to a portable JSON, Markdown, JSONL or CSV file.
     short_help: 
     param api_key kind=TyperOption type=str required=False default=None flags=--api-key help='API key for protected endpoints (or set AGENTWATCH_API_KEY).'
     param api_url kind=TyperOption type=str required=False default='http://localhost:8000' flags=--api help=''
-    param format kind=TyperOption type=choice required=False default=<ExportFormat.json: 'json'> flags=--format help='Export format: json or md'
+    param format kind=TyperOption type=choice required=False default=<ExportFormat.json: 'json'> flags=--format help='Export format: json, md, jsonl or csv'
     param output kind=TyperOption type=path required=False default=None flags=--output,-o help='Custom output file path'
     param session_id kind=TyperArgument type=str required=True default=None flags=session_id help='ID of the session to export'
 

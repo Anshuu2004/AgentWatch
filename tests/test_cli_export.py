@@ -1,3 +1,4 @@
+import csv
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -102,7 +103,9 @@ def test_export_invalid_format():
     result = runner.invoke(app, ["session", "export", "abc-123", "--format", "xml"])
     assert result.exit_code != 0
     assert "Invalid value" in result.output
-    assert "not one of 'json', 'md'" in result.output
+    # The error box wraps long lines, so check each allowed value on its own.
+    for choice in ("'json'", "'md'", "'jsonl'", "'csv'"):
+        assert choice in result.output
 
 
 def test_export_404(mock_httpx_client):
@@ -115,3 +118,96 @@ def test_export_404(mock_httpx_client):
     result = runner.invoke(app, ["session", "export", "abc-123"])
     assert result.exit_code == 1
     assert "Session abc-123 not found" in result.stdout
+
+
+def test_export_jsonl(mock_httpx_client, tmp_path):
+    out_file = tmp_path / "out.jsonl"
+
+    result = runner.invoke(
+        app, ["session", "export", "abc-123", "--format", "jsonl", "--output", str(out_file)]
+    )
+
+    assert result.exit_code == 0
+    assert "out.jsonl created successfully (1 events)" in result.stdout
+    lines = out_file.read_text(encoding="utf-8").splitlines()
+    assert [json.loads(line) for line in lines] == [DUMMY_REPLAY["steps"][0]["event"]]
+
+
+def test_export_csv(mock_httpx_client, tmp_path):
+    out_file = tmp_path / "out.csv"
+
+    result = runner.invoke(
+        app, ["session", "export", "abc-123", "--format", "csv", "--output", str(out_file)]
+    )
+
+    assert result.exit_code == 0
+    assert "out.csv created successfully (1 events)" in result.stdout
+    with open(out_file, encoding="utf-8", newline="") as handle:
+        (row,) = list(csv.DictReader(handle))
+    assert row["event_type"] == "TOOL_CALL"
+    assert row["tool_name"] == "bash"
+    assert row["status"] == "success"
+    # The replay events carry no session_id, so it comes from the session info.
+    assert row["session_id"] == "abc-123"
+    assert json.loads(row["metadata_json"])["tool_result"] == {"output": "hello\n"}
+
+
+def test_export_csv_default_file_name(mock_httpx_client, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(app, ["session", "export", "abc-123", "--format", "csv"])
+
+    assert result.exit_code == 0
+    assert (tmp_path / "agentwatch-session-abc-123.csv").exists()
+
+
+def test_export_jsonl_default_file_name(mock_httpx_client, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(app, ["session", "export", "abc-123", "--format", "jsonl"])
+
+    assert result.exit_code == 0
+    assert (tmp_path / "agentwatch-session-abc-123.jsonl").exists()
+
+
+@pytest.mark.parametrize("fmt", ["jsonl", "csv"])
+def test_export_tabular_formats_skip_steps_without_an_event(mock_httpx_client, tmp_path, fmt):
+    _, mock_response = mock_httpx_client
+    mock_response.json.return_value = {
+        "session": {},
+        "steps": [{"index": 0}, {"index": 1, "event": None}, "junk", DUMMY_REPLAY["steps"][0]],
+    }
+    out_file = tmp_path / f"out.{fmt}"
+
+    result = runner.invoke(
+        app, ["session", "export", "abc-123", "--format", fmt, "--output", str(out_file)]
+    )
+
+    assert result.exit_code == 0
+    assert "(1 events)" in result.stdout
+
+
+@pytest.mark.parametrize("fmt", ["jsonl", "csv"])
+def test_export_tabular_formats_handle_a_session_with_no_steps(mock_httpx_client, tmp_path, fmt):
+    _, mock_response = mock_httpx_client
+    mock_response.json.return_value = {"session": None, "steps": None}
+    out_file = tmp_path / f"out.{fmt}"
+
+    result = runner.invoke(
+        app, ["session", "export", "abc-123", "--format", fmt, "--output", str(out_file)]
+    )
+
+    assert result.exit_code == 0
+    assert "(0 events)" in result.stdout
+
+
+@pytest.mark.parametrize("fmt", ["jsonl", "csv"])
+def test_export_tabular_formats_report_unwritable_paths(mock_httpx_client, tmp_path, fmt):
+    out_file = tmp_path / "missing-dir" / f"out.{fmt}"
+
+    result = runner.invoke(
+        app, ["session", "export", "abc-123", "--format", fmt, "--output", str(out_file)]
+    )
+
+    assert result.exit_code == 1
+    assert "Cannot write to" in result.stdout

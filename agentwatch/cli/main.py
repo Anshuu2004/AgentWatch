@@ -546,19 +546,21 @@ def sessions(
 class ExportFormat(str, Enum):
     json = "json"
     md = "md"
+    jsonl = "jsonl"
+    csv = "csv"
 
 
 @session_app.command(name="export")
 def export(
     session_id: str = typer.Argument(..., help="ID of the session to export"),
     format: ExportFormat = typer.Option(
-        ExportFormat.json, "--format", help="Export format: json or md"
+        ExportFormat.json, "--format", help="Export format: json, md, jsonl or csv"
     ),
     output: Path | None = typer.Option(None, "--output", "-o", help="Custom output file path"),
     api_url: str = typer.Option("http://localhost:8000", "--api"),
     api_key: str | None = API_KEY_OPTION,
 ) -> None:
-    """[bold]Export[/bold] a session replay to a portable JSON or Markdown file."""
+    """[bold]Export[/bold] a session replay to a portable JSON, Markdown, JSONL or CSV file."""
 
     async def _run() -> None:
         try:
@@ -591,6 +593,28 @@ def export(
             with open(out_path, "w") as f:
                 json.dump(data, f, indent=2)
             console.print(f"[green]{out_path.name} created successfully[/green]")
+
+        elif format in (ExportFormat.jsonl, ExportFormat.csv):
+            from agentwatch.telemetry.exporter import export_to_csv, export_to_jsonl
+
+            out_path = output or Path(f"agentwatch-session-{session_id}.{format.value}")
+            session_info = data.get("session") or {}
+            events = [
+                step["event"]
+                for step in data.get("steps") or []
+                if isinstance(step, dict) and isinstance(step.get("event"), dict)
+            ]
+            try:
+                if format == ExportFormat.jsonl:
+                    count = export_to_jsonl(events, out_path)
+                else:
+                    count = export_to_csv(
+                        events, out_path, session_id=session_info.get("session_id") or session_id
+                    )
+            except OSError as exc:
+                console.print(f"[red]Cannot write to {out_path}: {exc}[/red]")
+                raise typer.Exit(1)
+            console.print(f"[green]{out_path.name} created successfully ({count} events)[/green]")
 
         elif format == ExportFormat.md:
             out_path = output or Path(f"agentwatch-session-{session_id}.md")

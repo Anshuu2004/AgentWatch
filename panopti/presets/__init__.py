@@ -9,8 +9,22 @@ from panopti.presets.profiles import (
     HypervisorProfile,
     get_profile,
 )
+from panopti.presets.rules import (
+    CLOUD_DESTRUCTIVE,
+    CONTAINER_DESTRUCTIVE,
+    PRESET_CATEGORIES,
+    SHELL_DESTRUCTIVE,
+    SQL_DESTRUCTIVE,
+    get_preset_patterns,
+)
 
 __all__ = [
+    "CLOUD_DESTRUCTIVE",
+    "CONTAINER_DESTRUCTIVE",
+    "PRESET_CATEGORIES",
+    "SHELL_DESTRUCTIVE",
+    "SQL_DESTRUCTIVE",
+    "get_preset_patterns",
     "HypervisorProfile",
     "PROFILE_FINTECH",
     "PROFILE_DEVOPS",

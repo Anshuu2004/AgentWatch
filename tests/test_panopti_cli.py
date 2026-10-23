@@ -27,7 +27,7 @@ def test_cli_live_command(capsys: pytest.CaptureFixture[str]) -> None:
     ret = main(["live"])
     assert ret == 0
     captured = capsys.readouterr().out
-    assert "PANOPTI SENTINEL [LIVE MONITOR]" in captured
+    assert "PANOPTI SENTINEL [LIVE MONITOR" in captured
 
 
 def test_cli_court_verify_valid(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

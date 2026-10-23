@@ -5,7 +5,7 @@ from __future__ import annotations
 import functools
 import inspect
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Callable, TypeVar
 
 from agentwatch.causality.decay import (
@@ -13,7 +13,7 @@ from agentwatch.causality.decay import (
     ConfidenceDecayTracker,
 )
 from agentwatch.circuit_breaker.loop_detector import AgentLoopError, LoopDetector
-from agentwatch.core.safety import SafetyEngine
+from agentwatch.core.safety import DEFAULT_POLICY, RiskPattern, SafetyEngine
 from agentwatch.core.schema import ToolCallData
 from agentwatch.core.watcher import AgentWatchBlockedError, watch
 from panopti.contracts import (
@@ -45,8 +45,16 @@ class GuardDecision:
 class PanoptiGuard:
     """Active runtime guardrail engine."""
 
-    def __init__(self, critical_confidence_floor: float = 0.40) -> None:
-        self._safety_engine = SafetyEngine()
+    def __init__(
+        self,
+        critical_confidence_floor: float = 0.40,
+        extra_patterns: list[RiskPattern] | None = None,
+    ) -> None:
+        if extra_patterns:
+            policy = replace(DEFAULT_POLICY, custom_patterns=list(extra_patterns))
+            self._safety_engine = SafetyEngine(policy=policy)
+        else:
+            self._safety_engine = SafetyEngine()
         self._loop_detector = LoopDetector(window_size=10, max_repeats=3, max_oscillations=2)
         self._contracts = ContractRegistry()
         self._confidence_tracker = ConfidenceDecayTracker(critical_floor=critical_confidence_floor)

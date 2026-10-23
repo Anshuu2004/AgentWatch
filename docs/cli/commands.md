@@ -27,7 +27,7 @@ agentwatch check-env
 | `agentwatch session list` | List recent sessions from the API. |
 | `agentwatch session watch` | Watch a live execution with safety scoring. |
 | `agentwatch session replay` | Replay a captured session step by step. |
-| `agentwatch session export` | Export a session to a file. |
+| `agentwatch session export` | Export a session to a file (`--format json\|md\|jsonl\|csv`, `--output <path>`). |
 | `agentwatch session score` | Score a session's confidence/anomalies. |
 | `agentwatch session rollback` | Roll a session back to a prior checkpoint. |
 | `agentwatch session prune` | Remove old stored sessions. |

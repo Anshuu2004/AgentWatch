@@ -6,6 +6,7 @@ Exports spans to OTLP, Jaeger, or stdout.
 
 from __future__ import annotations
 
+import json
 import logging
 import time
 from collections.abc import Generator
@@ -462,3 +463,191 @@ def init_telemetry(config: TelemetryConfig) -> TelemetryProvider:
     _provider = TelemetryProvider(config)
     _provider.initialize()
     return _provider
+
+
+# ─────────────────────────────────────────────
+# OpenInference -> OTel GenAI bridge
+# ─────────────────────────────────────────────
+# Pure Python: needs neither the opentelemetry SDK nor any OpenInference package.
+
+SPAN_KIND_ATTR = "openinference.span.kind"
+AW_SPAN_KIND_ATTR = "agentwatch.span_kind"
+
+# OpenInference span kind -> (AgentWatch event kind, gen_ai.operation.name or None).
+# Kinds with no GenAI operation (CHAIN, RETRIEVER) are carried by "agentwatch.span_kind".
+OPENINFERENCE_SPAN_KIND_MAP: dict[str, tuple[str, str | None]] = {
+    "LLM": ("MODEL_INVOCATION", "chat"),
+    "TOOL": ("TOOL_INVOCATION", "execute_tool"),
+    "AGENT": ("OPERATION", "invoke_agent"),
+    "CHAIN": ("OPERATION", None),
+    "RETRIEVER": ("RETRIEVAL", None),
+}
+
+# OpenInference attribute -> official GenAI attribute (one-to-one aliases).
+OPENINFERENCE_ATTRIBUTE_MAP: dict[str, str] = {
+    "llm.model_name": "gen_ai.request.model",
+    "llm.provider": "gen_ai.provider.name",
+    "llm.system": "gen_ai.system",
+    "llm.token_count.prompt": "gen_ai.usage.input_tokens",
+    "llm.token_count.completion": "gen_ai.usage.output_tokens",
+    "llm.token_count.total": "gen_ai.usage.total_tokens",
+    "tool.name": "gen_ai.tool.name",
+    "agent.name": "gen_ai.agent.name",
+}
+
+_TOKEN_TARGETS = frozenset(
+    {"gen_ai.usage.input_tokens", "gen_ai.usage.output_tokens", "gen_ai.usage.total_tokens"}
+)
+_MESSAGE_PREFIXES = {
+    "llm.input_messages": "gen_ai.input.messages",
+    "llm.output_messages": "gen_ai.output.messages",
+}
+# Keys in these namespaces belong to OpenInference; consumed or not, they never stay top-level.
+_OI_PREFIXES = (
+    "openinference.",
+    "llm.",
+    "tool.",
+    "tool_call.",
+    "agent.",
+    "retrieval.",
+    "embedding.",
+    "reranker.",
+    "input.",
+    "output.",
+    "session.",
+    "user.",
+    "metadata",
+)
+
+
+def _as_token_count(value: Any) -> int | None:
+    """Return an int for a numeric token count (int, whole float, digit string), else None."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value) if value.is_integer() else None
+    if isinstance(value, str) and value.strip().isdigit():
+        return int(value.strip())
+    return None
+
+
+def _json_or_raw(value: Any) -> Any:
+    """Parse a JSON-encoded list/object string; any other value is returned as is."""
+    if isinstance(value, str) and value.strip()[:1] in ("[", "{"):
+        try:
+            return json.loads(value)
+        except ValueError:
+            return value
+    return value
+
+
+def _flattened_messages(oi: dict[str, Any], prefix: str) -> tuple[list[dict[str, Any]], set[str]]:
+    """Collect ``<prefix>.<i>.message.<field>`` keys into a list of message dicts."""
+    by_index: dict[int, dict[str, Any]] = {}
+    used: set[str] = set()
+    head = prefix + "."
+    for key, value in oi.items():
+        if not key.startswith(head):
+            continue
+        index, _, rest = key[len(head) :].partition(".")
+        if index.isdigit() and rest.startswith("message."):
+            by_index.setdefault(int(index), {})[rest[len("message.") :]] = value
+            used.add(key)
+    return [by_index[i] for i in sorted(by_index)], used
+
+
+def normalize_otel_span(attributes: dict[str, Any]) -> dict[str, Any]:
+    """Normalize span attributes from OpenInference and/or OTel GenAI conventions.
+
+    Returns a new flat dict; ``attributes`` is never modified. The result holds:
+
+    * every attribute outside the OpenInference namespaces, unchanged (``gen_ai.*``,
+      ``db.*``, ``http.*`` and vendor keys pass through);
+    * OpenInference values translated to ``gen_ai.*`` names (``OPENINFERENCE_ATTRIBUTE_MAP``),
+      ``gen_ai.input.messages`` / ``gen_ai.output.messages`` lists (from a list, a JSON string
+      or flattened ``llm.input_messages.N.message.*`` keys), ``gen_ai.operation.name`` and
+      ``agentwatch.span_kind`` derived from ``openinference.span.kind``;
+    * ``extra``: OpenInference attributes with no mapping, and OpenInference values that lost
+      to an official value, under their original keys.
+
+    Precedence: when both conventions give the same information, the official ``gen_ai.*``
+    value wins and the OpenInference value is kept in ``extra``. ``None`` counts as absent;
+    ``0`` is a real value. Token counts given as digit strings become ints; a value that is
+    not a number goes to ``extra``. An unknown span kind goes to ``extra`` and sets no kind.
+    Running the function on its own output returns an equal dict.
+    """
+    out: dict[str, Any] = {}
+    extra: dict[str, Any] = {}
+    oi: dict[str, Any] = {}
+    for key, value in attributes.items():
+        if key == "extra" and isinstance(value, dict):
+            extra.update(value)  # output of an earlier call: keep what it kept
+        elif key.startswith(_OI_PREFIXES) or key in ("input", "output"):
+            if value is not None:
+                oi[key] = value
+        else:
+            out[key] = value
+
+    consumed: set[str] = set()
+
+    def put(target: str, value: Any, source: str) -> None:
+        """Set ``target`` from an OpenInference source unless an official value exists."""
+        if value is None:
+            return
+        if out.get(target) is None:
+            out[target] = value
+            consumed.add(source)
+        elif out[target] != value:
+            extra[source] = oi[source]  # conflict: official value wins, original is kept
+        else:
+            consumed.add(source)
+
+    for source, target in OPENINFERENCE_ATTRIBUTE_MAP.items():
+        if source not in oi:
+            continue
+        value = oi[source]
+        if target in _TOKEN_TARGETS:
+            value = _as_token_count(value)  # None -> not a number, stays for "extra"
+        put(target, value, source)
+
+    for prefix, target in _MESSAGE_PREFIXES.items():
+        messages = _json_or_raw(oi[prefix]) if prefix in oi else None
+        if messages is None:
+            messages, used = _flattened_messages(oi, prefix)
+            if messages:
+                consumed |= used
+                if out.get(target) is None:
+                    out[target] = messages
+                elif out[target] != messages:
+                    extra[prefix] = messages
+        elif out.get(target) is None:
+            out[target] = messages
+            consumed.add(prefix)
+        elif out[target] != messages:
+            extra[prefix] = oi[prefix]
+        else:
+            consumed.add(prefix)
+
+    kind = str(oi.get(SPAN_KIND_ATTR, "")).upper()
+    if kind in OPENINFERENCE_SPAN_KIND_MAP:
+        aw_kind, operation = OPENINFERENCE_SPAN_KIND_MAP[kind]
+        out[AW_SPAN_KIND_ATTR] = aw_kind
+        consumed.add(SPAN_KIND_ATTR)
+        if operation:
+            put("gen_ai.operation.name", operation, SPAN_KIND_ATTR)
+        # input.value / output.value are the span payload; what they mean depends on the kind
+        if kind == "TOOL":
+            put("gen_ai.tool.call.arguments", _json_or_raw(oi.get("input.value")), "input.value")
+            put("gen_ai.tool.call.result", _json_or_raw(oi.get("output.value")), "output.value")
+        elif kind == "LLM":
+            put("gen_ai.prompt", oi.get("input.value"), "input.value")
+            put("gen_ai.completion", oi.get("output.value"), "output.value")
+
+    for key, value in oi.items():
+        if key not in consumed:
+            extra.setdefault(key, value)
+    if extra:
+        out["extra"] = extra
+    return out

@@ -608,3 +608,65 @@ def test_mcp_sequential_jsonrpc_id_reuse(engine):
     built = engine.build("default", iid, obs)
     g = HappensBeforeGraph(built["events"])
     assert not g.has_cycle()
+
+
+def _oi_span(span_id: str, name: str, attrs: dict) -> dict:
+    return {
+        "traceId": "9" * 32,
+        "spanId": span_id,
+        "name": name,
+        "kind": 1,
+        "startTimeUnixNano": "1700000000000000000",
+        "endTimeUnixNano": "1700000001000000000",
+        "attributes": [{"key": k, "value": _val(v)} for k, v in attrs.items()],
+        "status": {"code": 1},
+    }
+
+
+def test_openinference_llm_span_becomes_model_invocation(engine):
+    span = _oi_span(
+        "a" * 16,
+        "ChatCompletion",
+        {
+            "openinference.span.kind": "LLM",
+            "llm.model_name": "gpt-4o",
+            "llm.provider": "openai",
+            "llm.token_count.prompt": 11,
+            "llm.token_count.completion": 4,
+            "input.value": "ping",
+            "output.value": "pong",
+        },
+    )
+    evs, _, _ = events_of(engine, drafts_from_spans(spans_from_otlp_json(_make_otlp([span]))))
+    ev = evs[0]
+    assert ev["kind"] == EventKind.MODEL_INVOCATION.value
+    assert ev["operation"] == "chat:gpt-4o"
+    assert ev["resources"]["tokens_in"] == 11
+    assert ev["resources"]["tokens_total"] == 15
+    assert ev["inputs"][0]["role"] == "prompt"
+    assert ev["outputs"][0]["role"] == "completion"
+    # the original attributes stay visible, untranslated
+    assert ev["attributes"]["otel.attributes"]["llm.model_name"] == "gpt-4o"
+
+
+def test_openinference_tool_span_becomes_tool_invocation(engine):
+    span = _oi_span(
+        "b" * 16,
+        "lookup",
+        {"openinference.span.kind": "TOOL", "tool.name": "lookup", "input.value": "{}"},
+    )
+    evs, _, _ = events_of(engine, drafts_from_spans(spans_from_otlp_json(_make_otlp([span]))))
+    assert evs[0]["kind"] == EventKind.TOOL_INVOCATION.value
+    assert evs[0]["operation"] == "lookup"
+
+
+def test_openinference_retriever_span_becomes_retrieval(engine):
+    span = _oi_span("c" * 16, "vector search", {"openinference.span.kind": "RETRIEVER"})
+    evs, _, _ = events_of(engine, drafts_from_spans(spans_from_otlp_json(_make_otlp([span]))))
+    assert evs[0]["kind"] == EventKind.RETRIEVAL.value
+
+
+def test_openinference_chain_span_stays_operation(engine):
+    span = _oi_span("d" * 16, "my chain", {"openinference.span.kind": "CHAIN"})
+    evs, _, _ = events_of(engine, drafts_from_spans(spans_from_otlp_json(_make_otlp([span]))))
+    assert evs[0]["kind"] == EventKind.OPERATION.value

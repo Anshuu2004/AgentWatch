@@ -27,6 +27,59 @@ def _int_flag(argv: list[str], flag: str, *, default: int, minimum: int) -> int:
     return value
 
 
+def _attest_report(rest: list[str]) -> int:
+    """``panopti attest report <seal.json> [--format md|html] [--output <path>]``."""
+    from panopti.reports import REPORT_FORMATS, SealReportError, export_report
+
+    usage = "Usage: panopti attest report <seal_file.json> [--format md|html] [--output <path>]"
+    seal_path: str | None = None
+    fmt = "md"
+    output: str | None = None
+    i = 0
+    while i < len(rest):
+        arg = rest[i]
+        if arg in ("--format", "-f", "--output", "-o"):
+            if i + 1 >= len(rest):
+                print(f"Error: {arg} needs a value\n{usage}", file=sys.stderr)
+                return 1
+            if arg in ("--format", "-f"):
+                fmt = rest[i + 1]
+            else:
+                output = rest[i + 1]
+            i += 2
+        elif arg.startswith("-") or seal_path is not None:
+            print(f"Error: unexpected argument '{arg}'\n{usage}", file=sys.stderr)
+            return 1
+        else:
+            seal_path = arg
+            i += 1
+    if seal_path is None:
+        print(usage, file=sys.stderr)
+        return 1
+    if fmt not in REPORT_FORMATS:
+        print(f"Error: unknown format '{fmt}' (choose md or html)", file=sys.stderr)
+        return 1
+    try:
+        with open(seal_path, encoding="utf-8") as f:
+            seal_data = json.load(f)
+        report = export_report(seal_data, fmt)
+    except (OSError, ValueError) as e:  # ValueError covers bad JSON and SealReportError
+        kind = "seal" if isinstance(e, SealReportError) else "seal file"
+        print(f"Error reading {kind}: {e}", file=sys.stderr)
+        return 1
+    if output is None:
+        sys.stdout.write(report)
+        return 0
+    try:
+        with open(output, "w", encoding="utf-8", newline="\n") as f:
+            f.write(report)
+    except OSError as e:
+        print(f"Error writing report: {e}", file=sys.stderr)
+        return 1
+    print(f"Report written to {output}")
+    return 0
+
+
 def main(args: list[str] | None = None) -> Any:
     """CLI entrypoint dispatching Panopti-specific commands and delegating to AgentWatch."""
     argv = list(sys.argv[1:] if args is None else args)
@@ -48,6 +101,7 @@ def main(args: list[str] | None = None) -> Any:
             print("  bench           Measure hypervisor latency overhead [--iterations <n>]")
             print("  court verify    Verify a cryptographic execution witness proof (.json)")
             print("  attest verify   Verify an immutable cryptographic policy attestation seal")
+            print("  attest report   Export a seal as a Markdown or HTML report [--format md|html]")
             print("  replay          Run deterministic shadow replay of an execution tape (.json)")
             print("  synth           Synthesize invariant contracts from trace (.json)\n")
             print("Available Profiles: fintech, devops, healthcare, support\n")
@@ -159,6 +213,8 @@ def main(args: list[str] | None = None) -> Any:
         return 1
 
     if argv and argv[0] == "attest":
+        if len(argv) >= 2 and argv[1] == "report":
+            return _attest_report(argv[2:])
         if len(argv) >= 3 and argv[1] == "verify":
             filepath = argv[2]
             key = (
@@ -184,6 +240,7 @@ def main(args: list[str] | None = None) -> Any:
                 print(f"Error reading attestation seal: {e}", file=sys.stderr)
                 return 1
         print("Usage: panopti attest verify <seal_file.json> [--key <secret_key>]")
+        print("       panopti attest report <seal_file.json> [--format md|html] [--output <path>]")
         return 1
 
     if argv and argv[0] == "replay":

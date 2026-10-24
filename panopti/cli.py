@@ -45,6 +45,7 @@ def main(args: list[str] | None = None) -> Any:
                 "  top / live      Interactive terminal sentinel monitor [--profile <name>]"
                 " [--cooldown <s>] [--max-failures <n>]"
             )
+            print("  bench           Measure hypervisor latency overhead [--iterations <n>]")
             print("  court verify    Verify a cryptographic execution witness proof (.json)")
             print("  attest verify   Verify an immutable cryptographic policy attestation seal")
             print("  replay          Run deterministic shadow replay of an execution tape (.json)")
@@ -73,6 +74,28 @@ def main(args: list[str] | None = None) -> Any:
         diag = run_diagnostics()
         print(PANOPTI_ASCII_BANNER)
         print(format_doctor_report(diag))
+        return 0
+
+    if argv and argv[0] == "bench":
+        usage = "Usage: panopti bench [--iterations <n>]  (default 10000)"
+        if any(a in ("-h", "--help") for a in argv[1:]):
+            print(usage)
+            return 0
+        rest = argv[1:]
+        try:
+            iterations = _int_flag(argv, "--iterations", default=10000, minimum=1)
+        except ValueError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 2
+        if "--iterations" in rest:
+            idx = rest.index("--iterations")
+            rest = rest[:idx] + rest[idx + 2:]
+        if rest:
+            print(f"Error: unexpected argument '{rest[0]}'", file=sys.stderr)
+            print(usage, file=sys.stderr)
+            return 2
+        from panopti.bench import format_bench_report, run_bench
+        print(format_bench_report(run_bench(iterations), iterations))
         return 0
 
     if argv and argv[0] in ("top", "live"):

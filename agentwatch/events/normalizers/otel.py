@@ -39,6 +39,7 @@ from agentwatch.events.normalize import (
     source_order,
 )
 from agentwatch.evidence.model import RawObservation
+from agentwatch.telemetry.otel import AW_SPAN_KIND_ATTR, normalize_otel_span
 
 MODEL_OPS = {"chat", "text_completion", "generate_content", "embeddings", "completion"}
 READ_DB_OPS = {"select", "get", "find", "query", "search", "read", "mget", "hget", "scan"}
@@ -68,7 +69,9 @@ def _ns(v: Any) -> datetime | None:
 
 class OTelNormalizer(Normalizer):
     name = "otel"
-    version = "2"  # 2: AgentWatch OTel extension attributes (ADR-0018)
+    # 2: AgentWatch OTel extension attributes (ADR-0018)
+    # 3: OpenInference spans are bridged to gen_ai.* before mapping (normalize_otel_span)
+    version = "3"
     source_kinds = frozenset({"otel.span"})
     maturity = "EXPERIMENTAL"
 
@@ -85,7 +88,8 @@ class OTelNormalizer(Normalizer):
 
     def _span(self, obs: RawObservation, ctx: NormalizeContext) -> Any:
         sp: dict[str, Any] = obs.payload()
-        a: dict[str, Any] = sp.get("attributes") or {}
+        raw_attrs: dict[str, Any] = sp.get("attributes") or {}
+        a: dict[str, Any] = normalize_otel_span(raw_attrs)
         res: dict[str, Any] = sp.get("resource") or {}
         b = EventBuilder(self, ctx, [obs])
         trace = sp.get("trace_id") or ""
@@ -159,6 +163,9 @@ class OTelNormalizer(Normalizer):
                 )
                 b.operation = f"{a.get('http.request.method') or a.get('http.method')} {host}"
                 b.object = EntityRef("http", str(host))
+        elif a.get(AW_SPAN_KIND_ATTR) == "RETRIEVAL":  # OpenInference RETRIEVER
+            b.kind = EventKind.RETRIEVAL
+            b.operation = name
         else:
             b.kind = EventKind.OPERATION
             b.operation = name
@@ -286,7 +293,7 @@ class OTelNormalizer(Normalizer):
             {
                 "otel.name": name,
                 "otel.kind": sp.get("kind"),
-                "otel.attributes": a,
+                "otel.attributes": raw_attrs,
                 "otel.scope": sp.get("scope"),
             }
         )

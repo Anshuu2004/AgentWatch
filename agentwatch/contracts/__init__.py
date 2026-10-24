@@ -7,6 +7,10 @@ from agentwatch.contracts.coverage import (
     parse_event_sequence,
 )
 from agentwatch.contracts.evaluator import evaluate_contract
+from agentwatch.contracts.irreversible import (
+    SAFETY_INVARIANT_BREACH,
+    IrreversibleInvariantMonitor,
+)
 from agentwatch.contracts.order import (
     CausalCycleError,
     CausalRelation,
@@ -46,9 +50,11 @@ __all__ = [
     "IngestionResult",
     "IngestionStatus",
     "IntervalPrecedence",
+    "IrreversibleInvariantMonitor",
     "MissingFact",
     "MissingReason",
     "Recoverability",
+    "SAFETY_INVARIANT_BREACH",
     "SequenceContinuityTracker",
     "SequenceGap",
     "TimestampInterval",

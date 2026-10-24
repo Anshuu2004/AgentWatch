@@ -13,6 +13,12 @@
       "contributions": 34
     },
     {
+      "login": "SHAURYASANYAL3",
+      "avatar_url": "https://github.com/SHAURYASANYAL3.png",
+      "html_url": "https://github.com/SHAURYASANYAL3",
+      "contributions": 29
+    },
+    {
       "login": "SakethSumanBathini",
       "avatar_url": "https://github.com/SakethSumanBathini.png",
       "html_url": "https://github.com/SakethSumanBathini",
@@ -22,12 +28,6 @@
       "login": "shauryasanyal",
       "avatar_url": "https://github.com/shauryasanyal.png",
       "html_url": "https://github.com/shauryasanyal",
-      "contributions": 28
-    },
-    {
-      "login": "SHAURYASANYAL3",
-      "avatar_url": "https://github.com/SHAURYASANYAL3.png",
-      "html_url": "https://github.com/SHAURYASANYAL3",
       "contributions": 28
     },
     {
@@ -130,6 +130,12 @@
       "login": "AshutoshDash1999",
       "avatar_url": "https://github.com/AshutoshDash1999.png",
       "html_url": "https://github.com/AshutoshDash1999",
+      "contributions": 2
+    },
+    {
+      "login": "Anshuu2004",
+      "avatar_url": "https://github.com/Anshuu2004.png",
+      "html_url": "https://github.com/Anshuu2004",
       "contributions": 2
     },
     {
@@ -253,12 +259,6 @@
       "contributions": 1
     },
     {
-      "login": "Anshuu2004",
-      "avatar_url": "https://github.com/Anshuu2004.png",
-      "html_url": "https://github.com/Anshuu2004",
-      "contributions": 1
-    },
-    {
       "login": "aabhinavvvvvvv",
       "avatar_url": "https://github.com/aabhinavvvvvvv.png",
       "html_url": "https://github.com/aabhinavvvvvvv",
@@ -271,6 +271,6 @@
       "contributions": 1
     }
   ],
-  "updated_at": "2026-10-24T00:39:06Z",
+  "updated_at": "2026-10-24T09:18:02Z",
   "total": 45
 }

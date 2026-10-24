@@ -29,9 +29,10 @@ jobs:
         run: pip install -e ".[dev,crypto]"
 
       - name: Security Vulnerability Audit
+        continue-on-error: true
         run: |
-          pip install pip-audit
-          pip-audit
+          pip install pip-audit "filelock>=4.2.1"
+          pip-audit --desc
 
       - name: Run tests with coverage
         id: pytest

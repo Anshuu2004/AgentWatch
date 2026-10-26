@@ -7,15 +7,15 @@
       "contributions": 161
     },
     {
-      "login": "pavsoss",
-      "avatar_url": "https://github.com/pavsoss.png",
-      "html_url": "https://github.com/pavsoss",
-      "contributions": 34
-    },
-    {
       "login": "SHAURYASANYAL3",
       "avatar_url": "https://github.com/SHAURYASANYAL3.png",
       "html_url": "https://github.com/SHAURYASANYAL3",
+      "contributions": 35
+    },
+    {
+      "login": "pavsoss",
+      "avatar_url": "https://github.com/pavsoss.png",
+      "html_url": "https://github.com/pavsoss",
       "contributions": 34
     },
     {
@@ -31,9 +31,9 @@
       "contributions": 28
     },
     {
-      "login": "anshul23102",
-      "avatar_url": "https://github.com/anshul23102.png",
-      "html_url": "https://github.com/anshul23102",
+      "login": "DebasmitaBose0",
+      "avatar_url": "https://github.com/DebasmitaBose0.png",
+      "html_url": "https://github.com/DebasmitaBose0",
       "contributions": 17
     },
     {
@@ -43,9 +43,9 @@
       "contributions": 17
     },
     {
-      "login": "DebasmitaBose0",
-      "avatar_url": "https://github.com/DebasmitaBose0.png",
-      "html_url": "https://github.com/DebasmitaBose0",
+      "login": "anshul23102",
+      "avatar_url": "https://github.com/anshul23102.png",
+      "html_url": "https://github.com/anshul23102",
       "contributions": 17
     },
     {
@@ -85,6 +85,12 @@
       "contributions": 4
     },
     {
+      "login": "Subodh-17",
+      "avatar_url": "https://github.com/Subodh-17.png",
+      "html_url": "https://github.com/Subodh-17",
+      "contributions": 4
+    },
+    {
       "login": "hinokamiyori",
       "avatar_url": "https://github.com/hinokamiyori.png",
       "html_url": "https://github.com/hinokamiyori",
@@ -101,12 +107,6 @@
       "avatar_url": "https://github.com/Anshuu2004.png",
       "html_url": "https://github.com/Anshuu2004",
       "contributions": 4
-    },
-    {
-      "login": "Subodh-17",
-      "avatar_url": "https://github.com/Subodh-17.png",
-      "html_url": "https://github.com/Subodh-17",
-      "contributions": 3
     },
     {
       "login": "AshutoshDash1999",
@@ -271,6 +271,6 @@
       "contributions": 1
     }
   ],
-  "updated_at": "2026-10-26T06:22:08Z",
+  "updated_at": "2026-10-26T08:38:06Z",
   "total": 45
 }

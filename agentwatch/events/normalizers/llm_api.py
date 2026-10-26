@@ -22,18 +22,21 @@ def token_logprobs(choice: Any) -> list[dict[str, Any]]:
 
     Returns ``[]`` when the provider sent none (the common case): logprobs are opt-in on the
     request, so absence is normal and must not be treated as an error.
+
+    Token text is left out on purpose: entropy only needs the numbers, and the text would sit in
+    event attributes outside the artifact redaction path.
     """
-    content = ((choice.get("logprobs") or {}).get("content")) if isinstance(choice, dict) else None
+    content = (choice.get("logprobs") or {}).get("content") if isinstance(choice, dict) else None
     out: list[dict[str, Any]] = []
     for item in content or []:
         if not isinstance(item, dict) or not isinstance(item.get("logprob"), int | float):
             continue
         top = [
-            {"token": t.get("token"), "logprob": t["logprob"]}
+            {"logprob": t["logprob"]}
             for t in item.get("top_logprobs") or []
             if isinstance(t, dict) and isinstance(t.get("logprob"), int | float)
         ]
-        out.append({"token": item.get("token"), "logprob": item["logprob"], "top_logprobs": top})
+        out.append({"logprob": item["logprob"], "top_logprobs": top})
     return out
 
 

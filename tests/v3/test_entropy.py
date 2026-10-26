@@ -177,8 +177,10 @@ def test_token_logprobs_helper_shapes():
         "top_logprobs": [{"token": "a", "logprob": -0.5, "bytes": [97]}, {"token": "b"}],
     }
     assert token_logprobs({"logprobs": {"content": [item]}}) == [
-        {"token": "a", "logprob": -0.5, "top_logprobs": [{"token": "a", "logprob": -0.5}]}
+        {"logprob": -0.5, "top_logprobs": [{"logprob": -0.5}]}
     ]
+    # token text is not stored (redaction), only the numbers
+    assert "token" not in token_logprobs({"logprobs": {"content": [item]}})[0]
 
 
 class _Completions:

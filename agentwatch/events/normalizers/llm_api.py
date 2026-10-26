@@ -17,6 +17,29 @@ from agentwatch.events.normalize import (
 from agentwatch.evidence.model import RawObservation
 
 
+def token_logprobs(choice: Any) -> list[dict[str, Any]]:
+    """Per-token logprobs of one OpenAI-style choice, trimmed to what analysis needs.
+
+    Returns ``[]`` when the provider sent none (the common case): logprobs are opt-in on the
+    request, so absence is normal and must not be treated as an error.
+
+    Token text is left out on purpose: entropy only needs the numbers, and the text would sit in
+    event attributes outside the artifact redaction path.
+    """
+    content = (choice.get("logprobs") or {}).get("content") if isinstance(choice, dict) else None
+    out: list[dict[str, Any]] = []
+    for item in content or []:
+        if not isinstance(item, dict) or not isinstance(item.get("logprob"), int | float):
+            continue
+        top = [
+            {"logprob": t["logprob"]}
+            for t in item.get("top_logprobs") or []
+            if isinstance(t, dict) and isinstance(t.get("logprob"), int | float)
+        ]
+        out.append({"logprob": item["logprob"], "top_logprobs": top})
+    return out
+
+
 class LLMApiNormalizer(Normalizer):
     provider = "unknown"
     maturity = "EXPERIMENTAL"
@@ -133,6 +156,8 @@ class OpenAINormalizer(LLMApiNormalizer):
         if isinstance(response, dict):
             for ch in response.get("choices") or []:
                 msg = ch.get("message") or {}
+                if "logprobs" not in b.attributes and (lp := token_logprobs(ch)):
+                    b.attributes["logprobs"] = lp  # first choice only: one token stream
                 if msg.get("content") is not None:
                     b.output(msg["content"], role="completion")
                 if msg.get("tool_calls"):

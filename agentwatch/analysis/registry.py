@@ -6,8 +6,14 @@ from agentwatch.analysis.base import Analyzer
 
 
 def builtin_analyzers() -> list[Analyzer]:
+    from agentwatch.analysis.entropy import TokenEntropyMonitor
     from agentwatch.behaviour.motifs import MotifAnalyzer
     from agentwatch.behaviour.profile import ProfileAnalyzer
     from agentwatch.provenance.ambiguity import ProvenanceEvidenceAnalyzer
 
-    return [MotifAnalyzer(), ProfileAnalyzer(), ProvenanceEvidenceAnalyzer()]
+    return [
+        MotifAnalyzer(),
+        ProfileAnalyzer(),
+        ProvenanceEvidenceAnalyzer(),
+        TokenEntropyMonitor(),
+    ]
